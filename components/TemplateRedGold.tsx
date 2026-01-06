@@ -27,7 +27,7 @@ interface EditingFieldState {
     fontSize?: number;
 }
 
-// Portal Component để đưa Modal ra ngoài body
+// Portal Component để đưa Modal ra ngoài body tránh lỗi scale
 const ModalPortal = ({ children }: { children?: React.ReactNode }) => {
     if (typeof document === 'undefined' || !children) return null;
     return createPortal(children, document.body);
@@ -95,7 +95,7 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
     return () => clearTimeout(timer);
   }, [localData, isEditMode, onAutosave, readonly]);
 
-  // --- ANIMATION OBSERVER (FROM USER CODE) ---
+  // --- ANIMATION OBSERVER ---
   useEffect(() => {
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
@@ -129,13 +129,12 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
              }
         }
     }
-    // Try auto play on first interaction
     document.addEventListener('click', playAudio, { once: true });
 
     return () => observer.disconnect();
-  }, [localData]); // Re-run when data changes (re-render)
+  }, [localData]);
 
-  // Cleanup object URLs when component unmounts
+  // Cleanup object URLs when component unmounts or image changes
   useEffect(() => {
       return () => {
           if (cropImageSrc && cropImageSrc.startsWith('blob:')) {
@@ -244,28 +243,18 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
       }
   };
 
-  // Map fields to Aspect Ratios based on pixel dimensions in CSS
   const getAspectRatioForField = (field: string): number => {
-      if (field === 'imageUrl') return 249 / 373; // #w-01kq9cgt
-      if (field === 'centerImage') return 354 / 269; // #w-y7yn4bui
-      if (field === 'footerImage') return 854 / 1280; // #w-l2pipleo background (approx)
+      if (field === 'imageUrl') return 249 / 373;
+      if (field === 'centerImage') return 354 / 269;
+      if (field === 'footerImage') return 854 / 1280;
       if (field === 'qrCodeUrl') return 1;
       
-      // Albums
-      if (field === 'albumImages-0') return 179 / 268;
-      if (field === 'albumImages-1') return 179 / 268;
-      if (field === 'albumImages-2') return 179 / 268;
-      if (field === 'albumImages-3') return 179 / 116;
-      if (field === 'albumImages-4') return 179 / 116;
-      if (field === 'albumImages-5') return 178 / 267;
-      if (field === 'albumImages-6') return 178 / 267;
-      if (field === 'albumImages-7') return 178 / 267;
-      if (field === 'albumImages-8') return 178 / 267;
+      if (field.startsWith('albumImages-')) {
+          if (field.includes('-3') || field.includes('-4')) return 179 / 116;
+          return 179 / 268;
+      }
       
-      // Gallery (Section 3)
-      if (field === 'galleryImages-0') return 116 / 165;
-      if (field === 'galleryImages-1') return 116 / 165;
-      if (field === 'galleryImages-2') return 116 / 165;
+      if (field.startsWith('galleryImages-')) return 116 / 165;
 
       return 1;
   }
@@ -280,9 +269,9 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Dùng URL.createObjectURL thay vì FileReader để tránh lag và lỗi màn hình đen trên mobile
+      // Dùng URL.createObjectURL thay vì FileReader để tránh lag và lỗi màn hình đen
       if (cropImageSrc && cropImageSrc.startsWith('blob:')) {
-         URL.revokeObjectURL(cropImageSrc); // Dọn dẹp URL cũ
+         URL.revokeObjectURL(cropImageSrc);
       }
       const objectUrl = URL.createObjectURL(file);
       setCropImageSrc(objectUrl);
@@ -324,7 +313,6 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
            return newData;
         });
         
-        // Dọn dẹp
         setIsCropping(false);
         if (cropImageSrc.startsWith('blob:')) {
             URL.revokeObjectURL(cropImageSrc);
@@ -336,17 +324,15 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
 
   const handleSave = () => { setIsEditMode(false); if (onSave) onSave(localData); };
 
-  // --- Wrapper Component for Edit Mode ---
   const EditableWrapper = ({ children, field, label, isText = true, defaultFontSize = 14, className = "", style = {}, onClick, ...props }: any) => {
       const handleClick = (e: React.MouseEvent) => {
-          e.stopPropagation(); // Stop propagation to prevent music toggle etc.
+          e.stopPropagation();
           if (onClick && !isEditMode) { onClick(); return; }
           if (!isEditMode || readonly) return;
           if (isText) openTextEditor(field, label, defaultFontSize); else triggerImageUpload(field);
       };
       
       const storedStyle = localData.elementStyles?.[field] || {};
-      // Merge styles. Note: className handles positioning in this template via IDs usually, so style is mostly for fonts
       const appliedStyle: React.CSSProperties = { ...style, fontSize: storedStyle.fontSize ? `${storedStyle.fontSize}px` : undefined };
       
       const editContainerStyles: React.CSSProperties = (isEditMode && !readonly) ? {
@@ -368,11 +354,9 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
   const getAlbumImg = (idx: number) => localData.albumImages?.[idx] || '';
   const getGalleryImg = (idx: number) => localData.galleryImages?.[idx] || '';
   
-  // Date parsing
   const safeDate = localData.date || new Date().toISOString().split('T')[0];
   const [year, month, day] = safeDate.split('-').map(Number);
   
-  // Custom CSS based on User's Code
   const css = `
     @font-face{font-family: "UTM-Cafeta.ttf"; src: url("https://statics.pancake.vn/web-media/04/eb/01/7a/e19221a44fabb6fd54c6339fd43b1c25ebbe20e97f6633beed4cbc79-w:0-h:0-l:31525-t:application/octet-stream.ttf") format("truetype"); font-display:swap;}
     @font-face{font-family: "Ephesis-Regular.ttf"; src: url("https://statics.pancake.vn/web-media/65/48/68/4f/ca5a0c732f276b6fef504eddf0e2d6cdf65cf198b0440dde6d90c5a8-w:0-h:0-l:141767-t:application/octet-stream.ttf") format("truetype"); font-display:swap;}
@@ -385,12 +369,20 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
     @font-face{font-family: "SVN-Gilroy-Bold-Italic.otf"; src: url("https://fonts.gstatic.com/s/roboto/v29/KFOjCnqEu92Fr1Mu51TzBwc4EsA.woff2") format("woff2");}
 
     .pageview{width:420px; background:#fff; overflow:hidden; position:relative; box-shadow: 0 0 20px rgba(0,0,0,0.1); margin: 0 auto;}
-    
     .p-absolute{position:absolute} .p-relative{position:relative}
     .full-width{width:100%} .full-height{height:100%}
     .image-background{background-position:center center;background-size:cover;background-repeat:no-repeat;width:100%;height:100%}
     
-    /* Animation */
+    .is-animation { opacity: 0; }
+    .is-animation.run-anim { opacity: 1; animation-fill-mode: both; }
+
+    /* CSS rules for IDs omitted for brevity, identical to previous version but assumed safe */
+    /* Updated critical CSS */
+    .vertical-line {border-left: 1px solid #536077; height: 65px; position: absolute; top: 408.5px;}
+    .form-input {width: 307px; height: 43px; background: #fff; border: 1px solid #8e0101; border-radius: 10px; padding: 0 10px; color: #990000; outline:none; font-family: 'Arial', sans-serif;}
+    .form-btn {width: 168px; height: 43px; background: #fff; border-radius: 5px; color: #8e0101; font-weight: bold; text-transform: uppercase; border: none; cursor: pointer; box-shadow: 0 4px 4px rgba(0,0,0,0.25); display: flex; justify-content:center; align-items:center;}
+    
+    /* Animation Keyframes ... */
     @keyframes fadeIn{from{opacity:0}to{opacity:1}}
     @keyframes fadeInUp{from{opacity:0;transform:translate3d(0,100%,0)}to{opacity:1;transform:none}}
     @keyframes fadeInDown{from{opacity:0;transform:translate3d(0,-100%,0)}to{opacity:1;transform:none}}
@@ -401,11 +393,9 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
     @keyframes slideInLeft{from{transform:translate3d(-100%,0,0);visibility:visible}to{transform:translate3d(0,0,0)}}
     @keyframes slideInRight{from{transform:translate3d(100%,0,0);visibility:visible}to{transform:translate3d(0,0,0)}}
     @keyframes flash{from,50%,to{opacity:1}25%,75%{opacity:0}}
-    
-    .is-animation { opacity: 0; }
-    .is-animation.run-anim { opacity: 1; animation-fill-mode: both; }
+    @keyframes slideInUp{from{transform:translate3d(0,100%,0);visibility:visible}to{transform:translate3d(0,0,0)}}
 
-    /* SPECIFIC IDs MAPPING */
+    /* Specific ID styling from user code */
     #section-1 {height: 800px; background-image: url('https://content.pancake.vn/1/s840x1600/fwebp/fd/42/7d/0c/1ca1e8525f99e3105eb930cd8ed684a64b07a0d9df7e0c725ca9779c-w:1260-h:2400-l:65030-t:image/png.png');}
     #w-kb6stlwe{top:80px;left:3.5px;width:413px;height:60px;}
     #w-kb6stlwe h1{font-family:'UTM-Sloop-1.ttf', sans-serif;font-size:40px;text-align:center;text-shadow:0px 4px 4px #fff;color:#000; margin:0;}
@@ -427,8 +417,6 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
     #w-zvm741p4{top:755.8px;left:92px;width:236px;border-bottom: 1px dotted #000;} 
     #w-1j4sk2pp{top:0;left:420px;width:420px;height:800px;pointer-events:none;}
     #w-lra9lkfk{top:0;left:-420px;width:420px;height:800px;pointer-events:none;}
-
-    /* Section 2 */
     #section-2 {height: 714px; background-image: url('https://content.pancake.vn/1/s840x1600/fwebp/fd/42/7d/0c/1ca1e8525f99e3105eb930cd8ed684a64b07a0d9df7e0c725ca9779c-w:1260-h:2400-l:65030-t:image/png.png');}
     #w-7sjvq3be{top:243.5px;left:58px;width:304px;}
     #w-7sjvq3be h2{font-family:'BlackMango-Medium.otf',sans-serif;font-size:14px;text-align:center; margin:0;}
@@ -448,8 +436,6 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
     #w-y1s24e6p{top:171px;left:21.5px;width:165px;font-size:13px;text-align:center;}
     #w-zp11tpir{top:0;left:167px;width:86px;height:86px;}
     #w-dsdbdzxr{top:65px;left:176px;width:68px;height:68px;}
-
-    /* Section 3 */
     #section-3 {height: 515px; background-image: url('https://content.pancake.vn/1/s840x1600/fwebp/fd/42/7d/0c/1ca1e8525f99e3105eb930cd8ed684a64b07a0d9df7e0c725ca9779c-w:1260-h:2400-l:65030-t:image/png.png');}
     #w-qube8kir{top:390px;left:114.6px;width:185px;}
     #w-qube8kir p{font-family:'Arial',sans-serif;font-size:35px;font-weight:bold;letter-spacing:3px;text-align:center; margin:0;}
@@ -471,11 +457,8 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
     #w-14ongvqg p{font-family:'Arial',sans-serif;font-size:14px;letter-spacing:3px;text-align:center; margin:0;}
     #w-tfi5tzev{top:441px;left:114.6px;width:185px;}
     #w-tfi5tzev p{font-family:'Arial',sans-serif;font-size:14px;letter-spacing:3px;text-align:center; margin:0;}
-    .vertical-line {border-left: 1px solid #536077; height: 65px; position: absolute; top: 408.5px;}
     #line-left {left: 95px; transform: rotate(90deg);}
     #line-right {left: 250.6px; transform: rotate(90deg);}
-
-    /* Section 4 Map */
     #section-4 {height: 605px; background-image: url('https://content.pancake.vn/1/s840x1600/fwebp/fd/42/7d/0c/1ca1e8525f99e3105eb930cd8ed684a64b07a0d9df7e0c725ca9779c-w:1260-h:2400-l:65030-t:image/png.png');}
     #w-vdwipz9k{top:225px;left:22.5px;width:375px;height:375px;}
     #w-avv4pubr{top:11.5px;left:-3.5px;width:427px;}
@@ -487,19 +470,13 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
     #w-prbr1wdj{top:154px;left:137px;width:140px;height:32px;display:flex;justify-content:center;align-items:center;background:#b10000;color:#fff;border-radius:42px;text-decoration:none;font-family:'Arial',sans-serif;font-size:15px;box-shadow:0 4px 4px rgba(0,0,0,0.25);}
     #w-zajrqtwu{top:40px;left:53px;width:309px;height:168px;border: 2px solid #8e0101; border-radius: 16px;}
     #w-bv76anck{top:411.5px;left:288px;width:38px;height:38px;}
-
-    /* Section RSVP */
     #section-rsvp {height: 522px; background-image: url('https://content.pancake.vn/1/s840x1600/fwebp/fd/42/7d/0c/1ca1e8525f99e3105eb930cd8ed684a64b07a0d9df7e0c725ca9779c-w:1260-h:2400-l:65030-t:image/png.png');}
     #w-qp7zqavj{top:124.5px;left:35px;width:350px;height:312px;background:rgba(177, 0, 0, 1);border-radius:16px;border:1px solid #e5e7eb;}
     #w-yj0y61d2{top:14.3px;left:58px;width:304px;}
     #w-yj0y61d2 h2{font-family:'Ephesis-Regular.ttf',sans-serif;font-size:30px;line-height:1;text-align:center;color:#000; margin:0;}
     #w-d688ytkq{top:144px;left:56.5px;width:307px;height:277px;}
-    .form-input {width: 307px; height: 43px; background: #fff; border: 1px solid #8e0101; border-radius: 10px; padding: 0 10px; color: #990000; outline:none; font-family: 'Arial', sans-serif;}
-    .form-btn {width: 168px; height: 43px; background: #fff; border-radius: 5px; color: #8e0101; font-weight: bold; text-transform: uppercase; border: none; cursor: pointer; box-shadow: 0 4px 4px rgba(0,0,0,0.25); display: flex; justify-content:center; align-items:center;}
     #w-qbpa8242{top:456.4px;left:113px;width:194px;height:40px;display:flex;justify-content:center;align-items:center;background:#b10000;color:#fff;border-radius:9px;font-weight:bold;cursor:pointer;box-shadow:0 4px 4px rgba(0,0,0,0.25);font-family:'Arial', sans-serif;}
     #w-1gjqg7sh{top:0;left:-566px;width:350px;height:667px;pointer-events:none;}
-
-    /* Albums */
     #section-5 {height: 632px; background-image: url('https://content.pancake.vn/1/s840x1600/fwebp/fd/42/7d/0c/1ca1e8525f99e3105eb930cd8ed684a64b07a0d9df7e0c725ca9779c-w:1260-h:2400-l:65030-t:image/png.png');}
     #w-8job6w7j{top:0;left:20.5px;width:185px;}
     #w-8job6w7j p{font-family:'Ephesis-Regular.ttf',sans-serif;font-size:32px;text-align:center; margin:0;}
@@ -509,23 +486,18 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
     #w-ui8sxx6m{top:374.5px;left:214px;width:179px;height:116px;}
     #w-grkveilf{top:497px;left:214px;width:179px;height:116px;}
     #w-y4blj2tv{top:6.5px;left:214.5px;width:165px;height:35px;}
-
     #section-6 {height: 563px; background-image: url('https://content.pancake.vn/1/s840x1600/fwebp/fd/42/7d/0c/1ca1e8525f99e3105eb930cd8ed684a64b07a0d9df7e0c725ca9779c-w:1260-h:2400-l:65030-t:image/png.png');}
     #w-zzn6hpkr{top:283px;left:25.5px;width:178px;height:267px;}
     #w-jz70nzjp{top:283px;left:214px;width:178px;height:267px;}
     #w-05hqo9e4{top:6px;left:25px;width:178px;height:267px;}
     #w-m5s2x14e{top:6px;left:213.5px;width:178px;height:267px;}
-
-    /* Footer */
     #section-7 {height: 630px; position:relative;}
     #w-l2pipleo{top:0;left:0;width:420px;height:630px;}
     #w-k0ppg09a{top:427.5px;left:-30px;width:480px;}
     #w-k0ppg09a p{color:#fff;font-family:'UTM-Azkia.ttf',sans-serif;font-size:38px;text-align:center; margin:0;}
-    #w-s8t0kmal{top:338px;left:11px;width:397px;height:155px;}
+    #w-sram9ddz{top:338px;left:11px;width:397px;height:155px;}
     #w-way1u3f7{top:0;left:0;width:423px;height:630px;background:rgba(255, 255, 255, 0.62);}
     #w-ycfzoku0{top:354px;left:-17px;width:453px;height:147px;background:rgba(0, 0, 0, 0.48);}
-
-    /* Popup */
     #w-dut1632z{top:87.3px;left:85px;width:230px;height:227px;background:rgba(144, 39, 50, 1);}
     #w-30dwb5gn{top:14.5px;left:73px;width:254px;text-align:center;font-family:'Ephesis-Regular.ttf',sans-serif;font-size:40px;font-weight:bold;}
     #w-aiywg9g7{top:102px;left:101px;width:200px;height:198px;}
@@ -539,9 +511,7 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
       <input type="file" ref={musicInputRef} style={{ display: 'none' }} accept="audio/*" onChange={handleMusicChange} />
       <audio ref={audioRef} src={localData.musicUrl || "https://statics.pancake.vn/web-media/5e/ee/bf/4a/afa10d3bdf98ca17ec3191ebbfd3c829d135d06939ee1f1b712d731d-w:0-h:0-l:2938934-t:audio/mpeg.mp3"} loop />
 
-      {/* --- CÁC MODAL ĐƯỢC RENDER QUA PORTAL ĐỂ TRÁNH LỖI TRANSFORM --- */}
-      
-      {/* Cropper Modal */}
+      {/* --- PORTALS --- */}
       <AnimatePresence>
         {isCropping && cropImageSrc && (
             <ModalPortal>
@@ -559,7 +529,6 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
         )}
       </AnimatePresence>
 
-      {/* Text Editor Modal */}
       <AnimatePresence>
           {editingField && (
              <ModalPortal>
@@ -579,7 +548,6 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
           )}
       </AnimatePresence>
 
-      {/* POPUPS (Bank & Success) */}
       <AnimatePresence>
           {showBankPopup && (
               <ModalPortal>
@@ -614,10 +582,311 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
           )}
       </AnimatePresence>
 
-      {/* Wrapper để xử lý Scale */}
+      {/* Wrapper Scale */}
       <div 
         ref={containerRef}
         style={{
             transform: `scale(${scale})`,
             transformOrigin: 'top center',
             width: '420px', 
+            marginBottom: `-${(1 - scale) * 3000}px` 
+        }}
+        className="shrink-0"
+      >
+
+      <div className="pageview shadow-2xl relative">
+        
+        {!readonly && (
+            <div className="absolute top-4 right-4 z-[150] flex items-center gap-2">
+                 {isEditMode && saveStatus !== 'idle' && <div className="bg-black/60 text-white px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-1.5">{saveStatus === 'saving' ? <><UploadCloud className="w-3 h-3 animate-bounce" /> Đang lưu...</> : <><Check className="w-3 h-3 text-green-400" /> Đã lưu</>}</div>}
+                 <button onClick={() => isEditMode ? handleSave() : setIsEditMode(true)} className={`p-2 backdrop-blur-md rounded-full shadow-sm transition-all ${isEditMode ? 'bg-rose-600 text-white shadow-rose-300' : 'bg-white/60 hover:bg-white text-gray-700'}`}>{isEditMode ? <Check className="w-5 h-5" /> : <Pencil className="w-5 h-5" />}</button>
+            </div>
+        )}
+
+        {/* SECTION 1 */}
+        <div id="section-1" className="p-relative image-background">
+            <EditableWrapper field="groomName" label="Tên Dâu Rể" defaultFontSize={40} id="w-kb6stlwe" className="p-absolute is-animation" data-anim="zoomIn" data-delay="0s" data-duration="4s">
+                <h1>{localData.groomName || 'Anh Tú'} - {localData.brideName || 'Diệu Nhi'}</h1>
+            </EditableWrapper>
+            <EditableWrapper field="date" label="Ngày Cưới" defaultFontSize={22} id="w-kcf30pvx" className="p-absolute is-animation" data-anim="fadeInUp" data-duration="3s">
+                <h2>{localData.date.split('-').reverse().join('.')}</h2>
+            </EditableWrapper>
+            <EditableWrapper field="invitedTitle" label="Tiêu đề" defaultFontSize={20} id="w-i3tjofn6" className="p-absolute is-animation" data-anim="fadeInDown" data-duration="3s">
+                <h2>{localData.invitedTitle || "THIỆP MỜI"}</h2>
+            </EditableWrapper>
+            <EditableWrapper field="imageUrl" isText={false} id="w-01kq9cgt" className="p-absolute">
+                <div className="image-background" style={{backgroundImage: `url('${localData.imageUrl || 'https://statics.pancake.vn/web-media/ab/56/c3/d2/ae46af903d624877e4e71b00dc5ab4badaa10a8956d3c389ccbc73e9-w:1080-h:1620-l:151635-t:image/jpeg.jpeg'}')`}}></div>
+            </EditableWrapper>
+            <EditableWrapper field="time" label="Giờ" defaultFontSize={15} id="w-b38gb1ay" className="p-absolute is-animation" data-anim="fadeInUp" data-duration="3s">
+                <h2>{localData.time ? `${localData.time} - ` : ''}THỨ 5</h2>
+            </EditableWrapper>
+            
+            <div id="w-lf6hdy88" className="p-absolute is-animation" data-anim="fadeIn" data-duration="7s"><div className="image-background" style={{backgroundImage: "url('https://content.pancake.vn/1/s487x487/fwebp/c9/7c/2a/c5/5ba36c13eb69d83d80e92d1a2eee50cfee36e987297533b6480719a7-w:500-h:500-l:12182-t:image/png.png')"}}></div></div>
+            <div id="w-7r4uk9mb" className="p-absolute is-animation" data-anim="fadeIn" data-duration="7s"><div className="image-background" style={{backgroundImage: "url('https://statics.pancake.vn/web-media/b3/56/e9/68/af4129e31d91132cb5316f8ce714f78a520be70fd480db42ff8122ce-w:500-h:500-l:43453-t:image/png.png')"}}></div></div>
+            <div id="w-xvsp4zia" className="p-absolute is-animation" data-anim="fadeIn" data-duration="7s"><div className="image-background" style={{backgroundImage: "url('https://statics.pancake.vn/web-media/b3/56/e9/68/af4129e31d91132cb5316f8ce714f78a520be70fd480db42ff8122ce-w:500-h:500-l:43453-t:image/png.png')"}}></div></div>
+            <div id="w-eyyclpyr" className="p-absolute is-animation" data-anim="fadeIn" data-duration="7s"><div className="image-background" style={{backgroundImage: "url('https://content.pancake.vn/1/fwebp/f5/0c/65/6f/daee3dc9b5487eb190fd88220ef5e6249cfe15ee9b4b145c97a89ee1-w:500-h:500-l:50319-t:image/png.png')"}}></div></div>
+            
+            <div id="w-l1qm7i9q" className="p-absolute is-animation" data-anim="fadeInUp" data-duration="3s"><h2>Trân Trọng Kính Mời:</h2></div>
+            <div id="w-lme5ajk5" className="p-absolute is-animation" data-anim="fadeInUp" data-duration="3s">
+                <h2>{guestName || (readonly ? "Khách Quý" : "[Tên Khách Mời]")}</h2>
+            </div>
+            <div id="w-zvm741p4" className="p-absolute is-animation" data-anim="zoomIn" data-duration="4s"></div>
+            
+            <div id="w-1j4sk2pp" className="p-absolute is-animation" data-anim="slideInLeft" data-duration="8s"><div className="image-background" style={{backgroundImage: "url('https://statics.pancake.vn/web-media/fb/1a/3d/db/5397c85e01e68520b6e686acfb8f4b71fc813f563e456d159b222a3c-w:1260-h:2400-l:1301050-t:image/png.png')"}}></div></div>
+            <div id="w-lra9lkfk" className="p-absolute is-animation" data-anim="slideInRight" data-duration="8s"><div className="image-background" style={{backgroundImage: "url('https://statics.pancake.vn/web-media/0e/6c/18/fb/44e9347bb12368a07e646ad45939e6086fc1ce3b2b39c28663352c01-w:1260-h:2400-l:1296984-t:image/png.png')"}}></div></div>
+        </div>
+
+        {/* SECTION 2 */}
+        <div id="section-2" className="p-relative image-background">
+            <div id="w-zp11tpir" className="p-absolute"><div className="image-background" style={{backgroundImage: "url('https://statics.pancake.vn/web-media/5d/4d/ed/50/c176e3fd3e67b078488c02451f6a09af9fe9e929c4f113f5c162595e-w:500-h:500-l:22239-t:image/png.png')"}}></div></div>
+            <div id="w-dsdbdzxr" className="p-absolute"><div className="image-background" style={{backgroundImage: "url('https://statics.pancake.vn/web-media/b3/56/e9/68/af4129e31d91132cb5316f8ce714f78a520be70fd480db42ff8122ce-w:500-h:500-l:43453-t:image/png.png')"}}></div></div>
+            <div id="w-7sjvq3be" className="p-absolute is-animation" data-anim="fadeInUp" data-duration="3s"><h2>Trân Trọng Báo Tin Lễ Thành Hôn Của</h2></div>
+            
+            <EditableWrapper field="groomName" label="Tên Chú Rể" defaultFontSize={40} id="w-mz04c43b" className="p-absolute is-animation" data-anim="zoomIn" data-duration="4s">
+                <h1>{localData.groomName || 'Anh Tú'}</h1>
+            </EditableWrapper>
+            <div id="w-ejxhihol" className="p-absolute is-animation" data-anim="zoomIn" data-duration="4s"><h1>&</h1></div>
+            <EditableWrapper field="brideName" label="Tên Cô Dâu" defaultFontSize={40} id="w-0vqn3fzh" className="p-absolute is-animation" data-anim="zoomIn" data-duration="4s">
+                <h1>{localData.brideName || 'Diệu Nhi'}</h1>
+            </EditableWrapper>
+            
+            <EditableWrapper field="centerImage" isText={false} id="w-y7yn4bui" className="p-absolute is-animation" data-anim="slideInUp" data-duration="3s">
+                <div className="image-background" style={{backgroundImage: `url('${localData.centerImage || 'https://statics.pancake.vn/web-media/e2/8c/c5/37/905dccbcd5bc1c1b602c10c95acb9986765f735e075bff1097e7f457-w:736-h:981-l:47868-t:image/jpeg.jfif'}')`}}></div>
+            </EditableWrapper>
+            
+            <div id="w-aqbkkztv" className="p-absolute is-animation" data-anim="fadeInLeft" data-duration="3s"><p>NHÀ TRAI<br/><br/></p></div>
+            <div id="w-oj3482xm" className="p-absolute is-animation" data-anim="fadeInRight" data-duration="3s"><p>NHÀ GÁI<br/><br/></p></div>
+            
+            <div id="w-vq47tj4t" className="p-absolute is-animation" data-anim="fadeInLeft" data-duration="3s">
+                <EditableWrapper field="groomFather" label="Cha Chú Rể" defaultFontSize={16}><p>{localData.groomFather}</p></EditableWrapper>
+                <EditableWrapper field="groomMother" label="Mẹ Chú Rể" defaultFontSize={16}><p>{localData.groomMother}</p></EditableWrapper>
+            </div>
+            <div id="w-fynwgspj" className="p-absolute is-animation" data-anim="fadeInRight" data-duration="3s">
+                <EditableWrapper field="brideFather" label="Cha Cô Dâu" defaultFontSize={16}><p>{localData.brideFather}</p></EditableWrapper>
+                <EditableWrapper field="brideMother" label="Mẹ Cô Dâu" defaultFontSize={16}><p>{localData.brideMother}</p></EditableWrapper>
+            </div>
+            
+            <div id="w-y1s24e6p" className="p-absolute is-animation" data-anim="fadeInLeft" data-duration="3s">
+                <EditableWrapper field="groomAddress" label="Đ/C Nhà Trai" defaultFontSize={13}><p>{localData.groomAddress}</p></EditableWrapper>
+            </div>
+            <div id="w-2wvcu7z3" className="p-absolute is-animation" data-anim="fadeInRight" data-duration="3s">
+                <EditableWrapper field="brideAddress" label="Đ/C Nhà Gái" defaultFontSize={13}><p>{localData.brideAddress}</p></EditableWrapper>
+            </div>
+        </div>
+
+        {/* SECTION 3 */}
+        <div id="section-3" className="p-relative image-background">
+            <div id="w-6rllui0l" className="p-absolute is-animation" data-anim="fadeInUp" data-duration="3s"><h2>Trân Trọng Kính Mời</h2></div>
+            
+            <EditableWrapper field="galleryImages-0" isText={false} id="w-dyyqc44u" className="p-absolute is-animation" data-anim="fadeInUp" data-duration="3s">
+                <div className="image-background" style={{backgroundImage: `url('${getGalleryImg(0) || 'https://statics.pancake.vn/web-media/21/54/83/cb/163b4872b6600196d0ac068b1f046c5dd5f9d20c3ddad5e7c0abea9b-w:736-h:980-l:48194-t:image/jpeg.jfif'}')`}}></div>
+            </EditableWrapper>
+            <EditableWrapper field="galleryImages-1" isText={false} id="w-p5zt0rep" className="p-absolute is-animation" data-anim="fadeInUp" data-duration="3s">
+                <div className="image-background" style={{backgroundImage: `url('${getGalleryImg(1) || 'https://statics.pancake.vn/web-media/3c/3b/ca/e1/e12ca0e6af675d653327f5a3b5d2c7c2385f71d26b8fee7604b45828-w:1706-h:2560-l:224512-t:image/jpeg.jpg'}')`}}></div>
+            </EditableWrapper>
+            <EditableWrapper field="galleryImages-2" isText={false} id="w-to8ewwrh" className="p-absolute is-animation" data-anim="fadeInUp" data-duration="3s">
+                <div className="image-background" style={{backgroundImage: `url('${getGalleryImg(2) || 'https://statics.pancake.vn/web-media/6f/2b/71/1d/03a457a718b5bf78c5639d6de0521b7a19ec698dcd5737408a50bd16-w:1707-h:2560-l:275640-t:image/jpeg.jpg'}')`}}></div>
+            </EditableWrapper>
+            
+            <div id="w-8txukiew" className="p-absolute is-animation" data-anim="fadeIn" data-duration="3s"><p>THAM DỰ TIỆC MỪNG LỄ THÀNH HÔN<br/>Vào Lúc</p></div>
+            
+            <EditableWrapper field="date" label="Ngày" defaultFontSize={35} id="w-qube8kir" className="p-absolute is-animation" data-anim="zoomIn" data-duration="3s">
+                <p>{day}</p>
+            </EditableWrapper>
+            <div id="w-14ongvqg" className="p-absolute is-animation" data-anim="fadeInDown" data-duration="3s"><p>Thứ 5</p></div>
+            <div id="w-tfi5tzev" className="p-absolute is-animation" data-anim="fadeInUp" data-duration="3s"><p>Tháng {month}</p></div>
+            
+            <EditableWrapper field="time" label="Giờ" defaultFontSize={14} id="w-qkyo9emq" className="p-absolute">
+                <p>{localData.time ? localData.time.replace(':',' giờ ') : '10 giờ 00'}</p>
+            </EditableWrapper>
+            <EditableWrapper field="date" label="Năm" defaultFontSize={14} id="w-atv2737b" className="p-absolute">
+                <p>Năm {year}</p>
+            </EditableWrapper>
+            
+            <div id="line-left" className="vertical-line is-animation" data-anim="fadeIn" data-duration="3s"></div>
+            <div id="line-right" className="vertical-line is-animation" data-anim="fadeIn" data-duration="3s"></div>
+            
+            <EditableWrapper field="lunarDate" label="Ngày Âm" defaultFontSize={14} id="w-s8t0kmal" className="p-absolute">
+                <p>{localData.lunarDate}</p>
+            </EditableWrapper>
+            
+            <div id="w-20spjy25" className="p-absolute is-animation" data-anim="fadeInUp" data-duration="5s"><div className="image-background" style={{backgroundImage: "url('https://statics.pancake.vn/web-media/80/ac/eb/cf/85e75c674913047eea133813069cf9dc6d9a1acadb58c454077c94c5-w:500-h:500-l:9074-t:image/png.png')"}}></div></div>
+        </div>
+
+        {/* SECTION 4 MAP */}
+        <div id="section-4" className="p-relative image-background">
+            <div id="w-zajrqtwu" className="p-absolute"></div>
+            <div id="w-avv4pubr" className="p-absolute is-animation" data-anim="fadeIn" data-duration="3s"><p>BUỔI TIỆC ĐƯỢC TỔ CHỨC TẠI</p></div>
+            <EditableWrapper field="location" label="Địa điểm" defaultFontSize={20} id="w-m1u3o3mx" className="p-absolute is-animation" data-anim="fadeIn" data-duration="2s">
+                <p>{localData.location}</p>
+            </EditableWrapper>
+            <EditableWrapper field="address" label="Địa chỉ" defaultFontSize={14} id="w-oq2hoi54" className="p-absolute is-animation" data-anim="fadeIn" data-duration="2s">
+                <p>{localData.address}</p>
+            </EditableWrapper>
+            
+            <EditableWrapper 
+                field="mapUrl" 
+                label="Link Bản Đồ" 
+                isText={true} 
+                id="w-prbr1wdj"
+                className="p-absolute is-animation" 
+                data-anim="pulse" 
+                data-duration="4s"
+                onClick={() => !isEditMode && window.open(localData.mapUrl || 'https://maps.google.com', '_blank')}
+            >
+                Xem Chỉ Đường
+            </EditableWrapper>
+            
+            <EditableWrapper field="mapImageUrl" isText={false} id="w-vdwipz9k" className="p-absolute is-animation" data-anim="fadeIn" data-duration="4s">
+                <div className="image-background" style={{backgroundImage: `url('${localData.mapImageUrl || 'https://statics.pancake.vn/web-media/f9/98/70/54/59b84c281bf331dc5baccfb671f74826f2cc248fe6459e58d0fd17bc-w:1200-h:1200-l:51245-t:image/png.png'}')`, borderRadius: '50%'}}></div>
+            </EditableWrapper>
+            <div id="w-bv76anck" className="p-absolute is-animation" data-anim="flash" data-duration="4s" style={{animationIterationCount: 'infinite'}}><div className="image-background" style={{backgroundImage: "url('https://statics.pancake.vn/web-media/59/9d/0d/23/829a2a25903e5b03a029f62911ad0300b2c875df84e143b3258f9633-w:3600-h:3600-l:165926-t:image/png.png')"}}></div></div>
+        </div>
+
+        {/* SECTION 5 RSVP */}
+        <div id="section-rsvp" className="p-relative image-background">
+            <div id="w-qp7zqavj" className="p-absolute is-animation" data-anim="fadeIn" data-duration="3s"></div>
+            <div id="w-yj0y61d2" className="p-absolute is-animation" data-anim="zoomIn" data-duration="3s"><h2>Xác Nhận Tham Dự<br/>&<br/>Gửi Lời Chúc</h2></div>
+            
+            <div id="w-d688ytkq" className="p-absolute">
+                 <input 
+                    className="form-input p-absolute" 
+                    style={{top:'0px', left:'0px'}}
+                    placeholder="Tên của bạn là?" 
+                    value={guestNameInput}
+                    onChange={(e) => setGuestNameInput(e.target.value)}
+                 />
+                 <input 
+                    className="form-input p-absolute" 
+                    style={{top:'57px', left:'0px'}}
+                    placeholder="Bạn là gì của Dâu Rể nhỉ?" 
+                    value={guestRelation}
+                    onChange={(e) => setGuestRelation(e.target.value)}
+                 />
+                 <input 
+                    className="form-input p-absolute" 
+                    style={{top:'114.5px', left:'0px'}}
+                    placeholder="Gửi lời chúc đến Dâu Rể nhé!" 
+                    value={guestWishes}
+                    onChange={(e) => setGuestWishes(e.target.value)}
+                 />
+                 <select 
+                    className="form-input p-absolute" 
+                    style={{top:'167.5px', left:'0px', appearance: 'none', backgroundColor: '#fff'}}
+                    value={attendance}
+                    onChange={(e) => setAttendance(e.target.value)}
+                 >
+                    <option value="Có Thể Tham Dự">Có Thể Tham Dự</option>
+                    <option value="Không Thể Tham Dự">Không Thể Tham Dự</option>
+                 </select>
+                 
+                 <button 
+                    className="form-btn p-absolute" 
+                    style={{top:'234.5px', left:'69.5px'}}
+                    onClick={(e) => handleRSVPSubmit(e as any)}
+                 >
+                     {isSubmittingRSVP ? <Loader2 className="animate-spin w-4 h-4 mr-2" /> : null}
+                     GỬI NGAY
+                 </button>
+                 
+                 {/* Google Sheet Config Button */}
+                 {(isEditMode && !readonly) && (
+                    <button 
+                        onClick={() => openTextEditor('googleSheetUrl', 'Link Google Sheet Script')}
+                        className="absolute z-50 w-8 h-8 bg-white rounded-full shadow-md flex items-center justify-center text-rose-600 hover:scale-110"
+                        style={{top: '238px', right: '10px'}}
+                        title="Cấu hình Google Sheet"
+                    >
+                        <Link size={14} />
+                    </button>
+                 )}
+            </div>
+
+            <div id="w-qbpa8242" className="p-absolute is-animation" data-anim="zoomIn" data-duration="3s" onClick={() => setShowBankPopup(true)}>
+                GỬI MỪNG CƯỚI
+            </div>
+            
+            <div id="w-1gjqg7sh" className="p-absolute"><div className="image-background" style={{backgroundImage: "url('https://statics.pancake.vn/web-media/fd/42/7d/0c/1ca1e8525f99e3105eb930cd8ed684a64b07a0d9df7e0c725ca9779c-w:1260-h:2400-l:65030-t:image/png.png')"}}></div></div>
+        </div>
+
+        {/* SECTION 6 ALBUM 1 */}
+        <div id="section-5" className="p-relative image-background">
+            <EditableWrapper field="albumTitle" label="Tiêu đề Album" defaultFontSize={32} id="w-8job6w7j" className="p-absolute is-animation" data-anim="zoomIn" data-duration="3s">
+                <p>Album hình cưới</p>
+            </EditableWrapper>
+            
+            <EditableWrapper field="albumImages-0" isText={false} id="w-8k7luhft" className="p-absolute is-animation" data-anim="fadeInUp" data-duration="3s">
+                <div className="image-background" style={{backgroundImage: `url('${getAlbumImg(0) || 'https://statics.pancake.vn/web-media/e9/80/6a/05/fcf14d0545da0e656237816d3712c50d2792afda074a96abfd9bcec5-w:878-h:1280-l:99344-t:image/jpeg.png'}')`}}></div>
+            </EditableWrapper>
+            <EditableWrapper field="albumImages-1" isText={false} id="w-damsktmr" className="p-absolute is-animation" data-anim="fadeInUp" data-duration="3s">
+                <div className="image-background" style={{backgroundImage: `url('${getAlbumImg(1) || 'https://statics.pancake.vn/web-media/09/00/8a/b4/692735fdc0775ae1530963a767ce4264df77078f659771a3cde9c5ac-w:840-h:1280-l:177736-t:image/jpeg.png'}')`}}></div>
+            </EditableWrapper>
+            <EditableWrapper field="albumImages-2" isText={false} id="w-mibzihv0" className="p-absolute is-animation" data-anim="fadeInLeft" data-duration="3s">
+                <div className="image-background" style={{backgroundImage: `url('${getAlbumImg(2) || 'https://statics.pancake.vn/web-media/84/b3/f5/cd/cc7957b9f0e497f01a17d05f9e73406b7650b249c169b424c7ee1767-w:854-h:1280-l:94691-t:image/jpeg.png'}')`}}></div>
+            </EditableWrapper>
+            <EditableWrapper field="albumImages-3" isText={false} id="w-ui8sxx6m" className="p-absolute is-animation" data-anim="fadeInRight" data-duration="3s">
+                <div className="image-background" style={{backgroundImage: `url('${getAlbumImg(3) || 'https://statics.pancake.vn/web-media/60/b1/5e/e9/89fd2d2d6cd9a62db6e70776243eb9ed8603fc1fb415bdc95da92104-w:1286-h:857-l:255701-t:image/jpeg.jpg'}')`}}></div>
+            </EditableWrapper>
+            <EditableWrapper field="albumImages-4" isText={false} id="w-grkveilf" className="p-absolute is-animation" data-anim="fadeInRight" data-duration="3s">
+                <div className="image-background" style={{backgroundImage: `url('${getAlbumImg(4) || 'https://statics.pancake.vn/web-media/7a/e8/d6/f6/da197a5a3542dfe09e7faa9e118999103385582808a2e2014fc72986-w:1286-h:988-l:154700-t:image/jpeg.jpg'}')`}}></div>
+            </EditableWrapper>
+            
+            <div id="w-y4blj2tv" className="p-absolute is-animation" data-anim="fadeInRight" data-duration="3s"><div className="image-background" style={{backgroundImage: "url('https://statics.pancake.vn/web-media/80/ac/eb/cf/85e75c674913047eea133813069cf9dc6d9a1acadb58c454077c94c5-w:500-h:500-l:9074-t:image/png.png')"}}></div></div>
+        </div>
+
+        {/* SECTION 7 ALBUM 2 */}
+        <div id="section-6" className="p-relative image-background">
+             <EditableWrapper field="albumImages-5" isText={false} id="w-05hqo9e4" className="p-absolute is-animation" data-anim="fadeInLeft" data-duration="3s">
+                <div className="image-background" style={{backgroundImage: `url('${getAlbumImg(5) || 'https://statics.pancake.vn/web-media/ad/c0/11/16/06080e040619cef49e87d7e06a574eb61310d3dc4bdc9f0fec3638c9-w:854-h:1280-l:259362-t:image/jpeg.png'}')`}}></div>
+             </EditableWrapper>
+             <EditableWrapper field="albumImages-6" isText={false} id="w-m5s2x14e" className="p-absolute is-animation" data-anim="fadeInRight" data-duration="3s">
+                <div className="image-background" style={{backgroundImage: `url('${getAlbumImg(6) || 'https://statics.pancake.vn/web-media/9d/60/03/fe/ecbd36b01369b3064a01426c59166451161e648939a52fd952564e21-w:862-h:1280-l:233470-t:image/jpeg.jpg'}')`}}></div>
+             </EditableWrapper>
+             <EditableWrapper field="albumImages-7" isText={false} id="w-zzn6hpkr" className="p-absolute is-animation" data-anim="fadeInLeft" data-duration="3s">
+                <div className="image-background" style={{backgroundImage: `url('${getAlbumImg(7) || 'https://statics.pancake.vn/web-media/cb/87/1f/67/25cdb38375c4ffc82ea938461257c5fbb49f3407e402f3e6ff903387-w:854-h:1280-l:160168-t:image/jpeg.jpg'}')`}}></div>
+             </EditableWrapper>
+             <EditableWrapper field="albumImages-8" isText={false} id="w-jz70nzjp" className="p-absolute is-animation" data-anim="fadeInRight" data-duration="3s">
+                <div className="image-background" style={{backgroundImage: `url('${getAlbumImg(8) || 'https://statics.pancake.vn/web-media/43/f6/88/e6/33fad2e85f20c3cab3d076535139371b0378fccc049b1083efffb1c5-w:894-h:1280-l:100553-t:image/jpeg.jpg'}')`}}></div>
+             </EditableWrapper>
+        </div>
+
+        {/* SECTION 8 FOOTER */}
+        <div id="section-7" className="p-relative">
+            <EditableWrapper field="footerImage" isText={false} id="w-l2pipleo" className="p-absolute">
+                <div className="image-background" style={{backgroundImage: `url('${localData.footerImage || 'https://statics.pancake.vn/web-media/ad/c0/11/16/06080e040619cef49e87d7e06a574eb61310d3dc4bdc9f0fec3638c9-w:854-h:1280-l:259362-t:image/jpeg.png'}')`}}></div>
+            </EditableWrapper>
+            <div id="w-way1u3f7" className="p-absolute"></div>
+            <div id="w-ycfzoku0" className="p-absolute"></div>
+            <div id="w-sram9ddz" className="p-absolute is-animation" data-anim="pulse" data-duration="3s" style={{animationIterationCount: 'infinite'}}>
+                <div className="image-background" style={{backgroundImage: "url('https://statics.pancake.vn/web-media/cf/cf/28/5f/f9ca08165577556ed2df053b0962a0e8e670490844d7ad5e84fa48b2-w:1366-h:530-l:48754-t:image/png.png')"}}></div>
+            </div>
+            <div id="w-k0ppg09a" className="p-absolute is-animation" data-anim="fadeInUp" data-duration="3s">
+                <p>Rất hân hạnh được đón tiếp!</p>
+            </div>
+        </div>
+
+        {/* Music Control Button */}
+        <div 
+            onClick={handleMusicClick}
+            className={`fixed left-4 bottom-4 z-[9999] w-[45px] h-[45px] bg-white/90 rounded-full flex justify-center items-center cursor-pointer shadow-md border border-gray-300 ${isPlaying ? 'animate-spin' : ''}`}
+            style={{animationDuration: '4s'}}
+        >
+            {isPlaying ? (
+               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+            ) : (
+               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+            )}
+            
+            {(isEditMode && !readonly) && (
+                <div className="absolute -top-1 -right-1 bg-rose-600 rounded-full p-1 w-5 h-5 flex items-center justify-center">
+                    <Upload className="w-3 h-3 text-white" />
+                </div>
+            )}
+        </div>
+
+      </div>
+      </div>
+    </div>
+  );
+};
+    

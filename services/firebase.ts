@@ -1,6 +1,7 @@
 
 import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider } from "firebase/auth";
+import firebase from "firebase/compat/app";
+import "firebase/compat/auth";
 import { getFirestore } from "firebase/firestore";
 
 // --- CẤU HÌNH CỦA BẠN ---
@@ -15,7 +16,10 @@ const firebaseConfig = {
 };
 
 // Khởi tạo Firebase
-const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
-export const googleProvider = new GoogleAuthProvider();
+// Using compat style for app and auth due to environment resolution issues with modular exports
+const app = firebase.initializeApp(firebaseConfig);
+export const auth = firebase.auth();
+export const googleProvider = new firebase.auth.GoogleAuthProvider();
+
+// Firestore keeps using modular style as it was reported working
 export const db = getFirestore(app);
