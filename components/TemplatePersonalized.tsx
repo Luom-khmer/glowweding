@@ -459,21 +459,10 @@ export const TemplatePersonalized: React.FC<TemplatePersonalizedProps> = ({ data
       <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept="image/*" onChange={handleFileChange} />
       <input type="file" ref={musicInputRef} style={{ display: 'none' }} accept="audio/*" onChange={handleMusicChange} />
       
-      {/* Wrapper xử lý Scale */}
-      <div 
-        ref={containerRef}
-        style={{
-            transform: `scale(${scale})`,
-            transformOrigin: 'top center',
-            width: '420px',
-            marginBottom: `-${(1 - scale) * 3500}px` 
-        }}
-        className="shrink-0"
-      >
-      {/* Cropper Modal */}
+      {/* Cropper Modal - MOVED OUTSIDE OF SCALED CONTAINER */}
       <AnimatePresence>
         {isCropping && cropImageSrc && (
-            <div className="fixed inset-0 z-[1000] bg-black flex flex-col">
+            <div className="fixed inset-0 z-[9999] bg-black flex flex-col">
                 <div className="relative flex-1 w-full bg-black"><Cropper image={cropImageSrc} crop={crop} zoom={zoom} aspect={currentAspect} rotation={rotation} onCropChange={setCrop} onCropComplete={(c, p) => setCroppedAreaPixels(p)} onZoomChange={setZoom} /></div>
                 <div className="bg-white p-4 flex flex-col gap-3">
                      <div className="flex items-center gap-4">
@@ -494,10 +483,10 @@ export const TemplatePersonalized: React.FC<TemplatePersonalizedProps> = ({ data
         )}
       </AnimatePresence>
       
-      {/* Text Edit Modal */}
+      {/* Text Edit Modal - MOVED OUTSIDE OF SCALED CONTAINER */}
       <AnimatePresence>
           {editingField && (
-             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm" onClick={() => setEditingField(null)}>
+             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm" onClick={() => setEditingField(null)}>
                 <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-6" onClick={e => e.stopPropagation()}>
                     <div className="flex justify-between items-center mb-4 border-b pb-2"><h3 className="font-bold">Chỉnh sửa nội dung</h3><button onClick={() => setEditingField(null)}><X /></button></div>
                     <div className="mb-6 space-y-4">
@@ -512,6 +501,18 @@ export const TemplatePersonalized: React.FC<TemplatePersonalizedProps> = ({ data
              </motion.div>
           )}
       </AnimatePresence>
+
+      {/* Wrapper xử lý Scale */}
+      <div 
+        ref={containerRef}
+        style={{
+            transform: `scale(${scale})`,
+            transformOrigin: 'top center',
+            width: '420px',
+            marginBottom: `-${(1 - scale) * 3500}px` 
+        }}
+        className="shrink-0"
+      >
 
       <div className="personalized-root shadow-2xl relative">
         <audio ref={audioRef} src={localData.musicUrl || "https://statics.pancake.vn/web-media/5e/ee/bf/4a/afa10d3bdf98ca17ec3191ebbfd3c829d135d06939ee1f1b712d731d-w:0-h:0-l:2938934-t:audio/mpeg.mp3"} loop />
