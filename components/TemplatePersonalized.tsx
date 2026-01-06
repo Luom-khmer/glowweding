@@ -1,5 +1,6 @@
 
 import React, { useEffect, useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { InvitationData } from '../types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Pencil, Save, Upload, Check, Music, ZoomIn, ZoomOut, RotateCw, Heart, Loader2, Link, UploadCloud } from 'lucide-react';
@@ -25,6 +26,12 @@ interface EditingFieldState {
     value: string;
     fontSize?: number;
 }
+
+// Portal Component
+const ModalPortal = ({ children }: { children: React.ReactNode }) => {
+    if (typeof document === 'undefined') return null;
+    return createPortal(children, document.body);
+};
 
 export const TemplatePersonalized: React.FC<TemplatePersonalizedProps> = ({ data: initialData, onSave, onAutosave, readonly = false, invitationId, guestName }) => {
   const [localData, setLocalData] = useState<InvitationData>(initialData);
@@ -111,6 +118,15 @@ export const TemplatePersonalized: React.FC<TemplatePersonalizedProps> = ({ data
     }, 800);
     return () => clearTimeout(timer);
   }, []);
+
+  // Cleanup object URLs
+  useEffect(() => {
+      return () => {
+          if (cropImageSrc && cropImageSrc.startsWith('blob:')) {
+              URL.revokeObjectURL(cropImageSrc);
+          }
+      };
+  }, [cropImageSrc]);
 
   // Music Handler
   const handleMusicClick = () => {
@@ -200,15 +216,15 @@ export const TemplatePersonalized: React.FC<TemplatePersonalizedProps> = ({ data
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setCropImageSrc(reader.result as string);
-        setIsCropping(true);
-        setZoom(1);
-        setRotation(0);
-        setCrop({ x: 0, y: 0 });
-      };
-      reader.readAsDataURL(file);
+      if (cropImageSrc && cropImageSrc.startsWith('blob:')) {
+          URL.revokeObjectURL(cropImageSrc);
+      }
+      const objectUrl = URL.createObjectURL(file);
+      setCropImageSrc(objectUrl);
+      setIsCropping(true);
+      setZoom(1);
+      setRotation(0);
+      setCrop({ x: 0, y: 0 });
     }
   };
 
@@ -248,6 +264,7 @@ export const TemplatePersonalized: React.FC<TemplatePersonalizedProps> = ({ data
             return newData;
         });
         setIsCropping(false);
+        if (cropImageSrc.startsWith('blob:')) URL.revokeObjectURL(cropImageSrc);
         setCropImageSrc(null);
         activeImageFieldRef.current = null;
       } catch (e) { console.error(e); }
@@ -459,106 +476,116 @@ export const TemplatePersonalized: React.FC<TemplatePersonalizedProps> = ({ data
       <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept="image/*" onChange={handleFileChange} />
       <input type="file" ref={musicInputRef} style={{ display: 'none' }} accept="audio/*" onChange={handleMusicChange} />
       
-      {/* --- MOVED MODALS OUTSIDE SCALED CONTAINER --- */}
+      {/* --- MOVED MODALS OUTSIDE SCALED CONTAINER VIA PORTAL --- */}
       
       {/* Cropper Modal */}
       <AnimatePresence>
         {isCropping && cropImageSrc && (
-            <div className="fixed inset-0 z-[1000] bg-black flex flex-col">
-                <div className="relative flex-1 bg-black"><Cropper image={cropImageSrc} crop={crop} zoom={zoom} aspect={currentAspect} rotation={rotation} onCropChange={setCrop} onCropComplete={(c, p) => setCroppedAreaPixels(p)} onZoomChange={setZoom} /></div>
-                <div className="bg-white p-4 flex flex-col gap-3">
-                     <div className="flex items-center gap-4">
-                         <ZoomOut size={16} className="text-gray-400" />
-                         <input type="range" value={zoom} min={1} max={3} step={0.1} onChange={(e) => setZoom(Number(e.target.value))} className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-rose-600" />
-                         <ZoomIn size={16} className="text-gray-400" />
-                     </div>
-                     <div className="flex items-center gap-4">
-                         <RotateCw size={16} className="text-gray-400" />
-                         <input type="range" value={rotation} min={0} max={360} step={1} onChange={(e) => setRotation(Number(e.target.value))} className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-rose-600" />
-                     </div>
-                     <div className="flex gap-3">
-                        <Button variant="secondary" className="flex-1" onClick={() => { setIsCropping(false); setCropImageSrc(null); }}>Hủy</Button>
-                        <Button className="flex-1" onClick={performCrop} icon={<Check className="w-4 h-4" />}>Cắt Ảnh</Button>
-                     </div>
+            <ModalPortal>
+                <div className="fixed inset-0 z-[10000] bg-black flex flex-col">
+                    <div className="relative flex-1 bg-black overflow-hidden">
+                        <Cropper image={cropImageSrc} crop={crop} zoom={zoom} aspect={currentAspect} rotation={rotation} onCropChange={setCrop} onCropComplete={(c, p) => setCroppedAreaPixels(p)} onZoomChange={setZoom} />
+                    </div>
+                    <div className="bg-white p-4 flex flex-col gap-3 shrink-0">
+                         <div className="flex items-center gap-4">
+                             <ZoomOut size={16} className="text-gray-400" />
+                             <input type="range" value={zoom} min={1} max={3} step={0.1} onChange={(e) => setZoom(Number(e.target.value))} className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-rose-600" />
+                             <ZoomIn size={16} className="text-gray-400" />
+                         </div>
+                         <div className="flex items-center gap-4">
+                             <RotateCw size={16} className="text-gray-400" />
+                             <input type="range" value={rotation} min={0} max={360} step={1} onChange={(e) => setRotation(Number(e.target.value))} className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-rose-600" />
+                         </div>
+                         <div className="flex gap-3">
+                            <Button variant="secondary" className="flex-1" onClick={() => { setIsCropping(false); setCropImageSrc(null); if(cropImageSrc?.startsWith('blob:')) URL.revokeObjectURL(cropImageSrc); }}>Hủy</Button>
+                            <Button className="flex-1" onClick={performCrop} icon={<Check className="w-4 h-4" />}>Cắt Ảnh</Button>
+                         </div>
+                    </div>
                 </div>
-            </div>
+            </ModalPortal>
         )}
       </AnimatePresence>
       
       {/* Text Edit Modal */}
       <AnimatePresence>
           {editingField && (
-             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm" onClick={() => setEditingField(null)}>
-                <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-6" onClick={e => e.stopPropagation()}>
-                    <div className="flex justify-between items-center mb-4 border-b pb-2"><h3 className="font-bold">Chỉnh sửa nội dung</h3><button onClick={() => setEditingField(null)}><X /></button></div>
-                    <div className="mb-6 space-y-4">
-                        {(editingField.key !== 'mapUrl' && editingField.key !== 'googleSheetUrl') && <input type="range" min="10" max="80" value={editingField.fontSize || 14} onChange={(e) => setEditingField({ ...editingField, fontSize: parseInt(e.target.value) })} className="w-full h-2 bg-gray-200 rounded-lg accent-rose-600" />}
-                        {editingField.key === 'date' ? <input type="date" className="w-full p-2 border rounded" value={editingField.value} onChange={(e) => setEditingField({ ...editingField, value: e.target.value })} /> : 
-                         editingField.key === 'time' ? <input type="time" className="w-full p-2 border rounded" value={editingField.value} onChange={(e) => setEditingField({ ...editingField, value: e.target.value })} /> :
-                         (editingField.key === 'mapUrl' || editingField.key === 'googleSheetUrl') ? <input type="text" placeholder={editingField.key === 'googleSheetUrl' ? "Dán link Google Apps Script vào đây..." : "Dán link Google Maps vào đây..."} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 outline-none" value={editingField.value} onChange={(e) => setEditingField({ ...editingField, value: e.target.value })} /> :
-                         <textarea rows={4} className="w-full p-2 border rounded" value={editingField.value} onChange={(e) => setEditingField({ ...editingField, value: e.target.value })} />}
-                    </div>
-                    <div className="flex justify-end gap-3"><Button variant="ghost" onClick={() => setEditingField(null)}>Hủy</Button><Button onClick={saveTextChange}>Lưu</Button></div>
-                </motion.div>
-             </motion.div>
+             <ModalPortal>
+                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm" onClick={() => setEditingField(null)}>
+                    <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-6" onClick={e => e.stopPropagation()}>
+                        <div className="flex justify-between items-center mb-4 border-b pb-2"><h3 className="font-bold">Chỉnh sửa nội dung</h3><button onClick={() => setEditingField(null)}><X /></button></div>
+                        <div className="mb-6 space-y-4">
+                            {(editingField.key !== 'mapUrl' && editingField.key !== 'googleSheetUrl') && <input type="range" min="10" max="80" value={editingField.fontSize || 14} onChange={(e) => setEditingField({ ...editingField, fontSize: parseInt(e.target.value) })} className="w-full h-2 bg-gray-200 rounded-lg accent-rose-600" />}
+                            {editingField.key === 'date' ? <input type="date" className="w-full p-2 border rounded" value={editingField.value} onChange={(e) => setEditingField({ ...editingField, value: e.target.value })} /> : 
+                             editingField.key === 'time' ? <input type="time" className="w-full p-2 border rounded" value={editingField.value} onChange={(e) => setEditingField({ ...editingField, value: e.target.value })} /> :
+                             (editingField.key === 'mapUrl' || editingField.key === 'googleSheetUrl') ? <input type="text" placeholder={editingField.key === 'googleSheetUrl' ? "Dán link Google Apps Script vào đây..." : "Dán link Google Maps vào đây..."} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 outline-none" value={editingField.value} onChange={(e) => setEditingField({ ...editingField, value: e.target.value })} /> :
+                             <textarea rows={4} className="w-full p-2 border rounded" value={editingField.value} onChange={(e) => setEditingField({ ...editingField, value: e.target.value })} />}
+                        </div>
+                        <div className="flex justify-end gap-3"><Button variant="ghost" onClick={() => setEditingField(null)}>Hủy</Button><Button onClick={saveTextChange}>Lưu</Button></div>
+                    </motion.div>
+                 </motion.div>
+             </ModalPortal>
           )}
       </AnimatePresence>
 
-      {/* POPUPS moved outside */}
+      {/* POPUPS */}
       <AnimatePresence>
             {showBankPopup && (
-                <motion.div 
-                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50"
-                    onClick={() => setShowBankPopup(false)}
-                >
-                    <motion.div className="relative bg-white w-[400px] h-[381px] border border-gray-200 shadow-xl" onClick={e => e.stopPropagation()}>
-                        <button onClick={() => setShowBankPopup(false)} className="absolute top-2 right-2 z-10 p-2"><X className="w-6 h-6 text-gray-500" /></button>
-                        <div className="abs pointer-events-none" style={{top: '87.3px', left: '85px', width: '230px', height: '227px', backgroundColor: 'rgba(144, 39, 50, 1)'}}></div>
-                        <div className="abs w-full text-center" style={{top: '14.5px', left:'73px', width:'254px'}}>
-                            <h2 style={{fontFamily: 'Ephesis-Regular, sans-serif', fontSize: '40px', fontWeight: 'bold'}}>Gửi Mừng Cưới</h2>
-                        </div>
-                        <EditableWrapper field="qrCode" isText={false} className="abs" style={{top: '102px', left: '101px', width: '200px', height: '198px', zIndex: 20}}>
-                             <div className="w-full h-full bg-cover" style={{backgroundImage: `url("${localData.qrCodeUrl || 'https://statics.pancake.vn/web-media/e2/bc/35/38/dc2d9ddf74d997785eb0c802bd3237a50de1118e505f1e0a89ae4ec1-w:592-h:1280-l:497233-t:image/png.png'}")`}}></div>
-                        </EditableWrapper>
-                        <div className="abs w-full text-center" style={{top: '323px', left:'22px', width:'356px', zIndex: 20}}>
-                            <EditableWrapper field="bankInfo" label="Thông Tin Ngân Hàng" className="text-[17px] font-bold inline-block bg-white/80 px-2 rounded">
-                                <h4 style={{whiteSpace: 'pre-line', fontFamily: 'Arial, sans-serif'}}>{localData.bankInfo}</h4>
+                <ModalPortal>
+                    <motion.div 
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50"
+                        onClick={() => setShowBankPopup(false)}
+                    >
+                        <motion.div className="relative bg-white w-[400px] h-[381px] border border-gray-200 shadow-xl" onClick={e => e.stopPropagation()}>
+                            <button onClick={() => setShowBankPopup(false)} className="absolute top-2 right-2 z-10 p-2"><X className="w-6 h-6 text-gray-500" /></button>
+                            <div className="abs pointer-events-none" style={{top: '87.3px', left: '85px', width: '230px', height: '227px', backgroundColor: 'rgba(144, 39, 50, 1)'}}></div>
+                            <div className="abs w-full text-center" style={{top: '14.5px', left:'73px', width:'254px'}}>
+                                <h2 style={{fontFamily: 'Ephesis-Regular, sans-serif', fontSize: '40px', fontWeight: 'bold'}}>Gửi Mừng Cưới</h2>
+                            </div>
+                            <EditableWrapper field="qrCode" isText={false} className="abs" style={{top: '102px', left: '101px', width: '200px', height: '198px', zIndex: 20}}>
+                                 <div className="w-full h-full bg-cover" style={{backgroundImage: `url("${localData.qrCodeUrl || 'https://statics.pancake.vn/web-media/e2/bc/35/38/dc2d9ddf74d997785eb0c802bd3237a50de1118e505f1e0a89ae4ec1-w:592-h:1280-l:497233-t:image/png.png'}")`}}></div>
                             </EditableWrapper>
-                        </div>
+                            <div className="abs w-full text-center" style={{top: '323px', left:'22px', width:'356px', zIndex: 20}}>
+                                <EditableWrapper field="bankInfo" label="Thông Tin Ngân Hàng" className="text-[17px] font-bold inline-block bg-white/80 px-2 rounded">
+                                    <h4 style={{whiteSpace: 'pre-line', fontFamily: 'Arial, sans-serif'}}>{localData.bankInfo}</h4>
+                                </EditableWrapper>
+                            </div>
+                        </motion.div>
                     </motion.div>
-                </motion.div>
+                </ModalPortal>
             )}
         </AnimatePresence>
 
         <AnimatePresence>
             {showSuccessModal && (
-                <motion.div
-                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm"
-                    onClick={() => setShowSuccessModal(false)}
-                >
+                <ModalPortal>
                     <motion.div
-                        initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-                        className="relative w-full max-w-sm bg-white rounded-xl overflow-hidden shadow-2xl"
-                        onClick={e => e.stopPropagation()}
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm"
+                        onClick={() => setShowSuccessModal(false)}
                     >
-                        <div className="relative aspect-[3/4] w-full">
-                             <img 
-                                src={localData.imageUrl || 'https://images.unsplash.com/photo-1606800052052-a08af7148866?q=80&w=1080&auto=format&fit=crop'} 
-                                className="w-full h-full object-cover" 
-                                alt="Thank you"
-                             />
-                             <div className="absolute top-1/2 left-0 w-full -translate-y-1/2 bg-black/40 py-8 backdrop-blur-[2px] text-center">
-                                <h2 style={{fontFamily: 'Ephesis-Regular, cursive'}} className="text-6xl text-white mb-2">thank you</h2>
-                                <p className="text-white text-lg tracking-wider italic">Rất hân hạnh được đón tiếp!</p>
-                             </div>
-                             <button onClick={() => setShowSuccessModal(false)} className="absolute top-2 right-2 text-white/80 hover:text-white bg-black/20 rounded-full p-1 transition-colors">
-                                <X size={24} />
-                             </button>
-                        </div>
+                        <motion.div
+                            initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                            className="relative w-full max-w-sm bg-white rounded-xl overflow-hidden shadow-2xl"
+                            onClick={e => e.stopPropagation()}
+                        >
+                            <div className="relative aspect-[3/4] w-full">
+                                 <img 
+                                    src={localData.imageUrl || 'https://images.unsplash.com/photo-1606800052052-a08af7148866?q=80&w=1080&auto=format&fit=crop'} 
+                                    className="w-full h-full object-cover" 
+                                    alt="Thank you"
+                                 />
+                                 <div className="absolute top-1/2 left-0 w-full -translate-y-1/2 bg-black/40 py-8 backdrop-blur-[2px] text-center">
+                                    <h2 style={{fontFamily: 'Ephesis-Regular, cursive'}} className="text-6xl text-white mb-2">thank you</h2>
+                                    <p className="text-white text-lg tracking-wider italic">Rất hân hạnh được đón tiếp!</p>
+                                 </div>
+                                 <button onClick={() => setShowSuccessModal(false)} className="absolute top-2 right-2 text-white/80 hover:text-white bg-black/20 rounded-full p-1 transition-colors">
+                                    <X size={24} />
+                                 </button>
+                            </div>
+                        </motion.div>
                     </motion.div>
-                </motion.div>
+                </ModalPortal>
             )}
         </AnimatePresence>
 
