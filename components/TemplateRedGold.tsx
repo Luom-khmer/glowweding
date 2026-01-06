@@ -674,7 +674,7 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
             </EditableWrapper>
             
             <div id="line-left" className="vertical-line is-animation" data-anim="fadeIn" data-duration="3s"></div>
-            <div id="line-right" class="vertical-line is-animation" data-anim="fadeIn" data-duration="3s"></div>
+            <div id="line-right" className="vertical-line is-animation" data-anim="fadeIn" data-duration="3s"></div>
             
             <EditableWrapper field="lunarDate" label="Ngày Âm" defaultFontSize={14} id="w-s8t0kmal" className="p-absolute">
                 <p>{localData.lunarDate}</p>
@@ -892,3 +892,4 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
     </div>
   );
 };
+    
