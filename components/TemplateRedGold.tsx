@@ -27,7 +27,6 @@ interface EditingFieldState {
     fontSize?: number;
 }
 
-// Portal Component để đưa Modal ra ngoài body tránh lỗi scale
 const ModalPortal = ({ children }: { children?: React.ReactNode }) => {
     if (typeof document === 'undefined' || !children) return null;
     return createPortal(children, document.body);
@@ -42,18 +41,15 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [editingField, setEditingField] = useState<EditingFieldState | null>(null);
   
-  // Scaling Logic
   const [scale, setScale] = useState(1);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // RSVP Logic
   const [guestNameInput, setGuestNameInput] = useState(guestName || ''); 
   const [guestRelation, setGuestRelation] = useState(''); 
   const [guestWishes, setGuestWishes] = useState('');
   const [attendance, setAttendance] = useState('Có Thể Tham Dự');
   const [isSubmittingRSVP, setIsSubmittingRSVP] = useState(false);
 
-  // Crop Logic
   const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
@@ -67,11 +63,10 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
   const musicInputRef = useRef<HTMLInputElement>(null);
   const activeImageFieldRef = useRef<string | null>(null);
 
-  // --- SCALING EFFECT ---
   useEffect(() => {
     const handleResize = () => {
         const windowWidth = window.innerWidth;
-        const DESIGN_WIDTH = 420; // Fixed width from user CSS
+        const DESIGN_WIDTH = 420; 
         if (windowWidth < DESIGN_WIDTH) {
             setScale(windowWidth / DESIGN_WIDTH);
         } else {
@@ -83,7 +78,6 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // --- AUTOSAVE ---
   useEffect(() => {
     if (!isEditMode || readonly || !onAutosave) return;
     setSaveStatus('saving');
@@ -95,7 +89,6 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
     return () => clearTimeout(timer);
   }, [localData, isEditMode, onAutosave, readonly]);
 
-  // --- ANIMATION OBSERVER ---
   useEffect(() => {
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
@@ -118,15 +111,12 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
     const elements = document.querySelectorAll('.is-animation');
     elements.forEach(el => observer.observe(el));
 
-    // Auto play music check
     const playAudio = async () => {
         if (audioRef.current && !isPlaying) {
              try {
                 await audioRef.current.play();
                 setIsPlaying(true);
-             } catch(e) {
-                 // Autoplay policy prevented
-             }
+             } catch(e) {}
         }
     }
     document.addEventListener('click', playAudio, { once: true });
@@ -134,7 +124,6 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
     return () => observer.disconnect();
   }, [localData]);
 
-  // Cleanup object URLs when component unmounts or image changes
   useEffect(() => {
       return () => {
           if (cropImageSrc && cropImageSrc.startsWith('blob:')) {
@@ -248,14 +237,11 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
       if (field === 'centerImage') return 354 / 269;
       if (field === 'footerImage') return 854 / 1280;
       if (field === 'qrCodeUrl') return 1;
-      
       if (field.startsWith('albumImages-')) {
           if (field.includes('-3') || field.includes('-4')) return 179 / 116;
           return 179 / 268;
       }
-      
       if (field.startsWith('galleryImages-')) return 116 / 165;
-
       return 1;
   }
 
@@ -269,7 +255,6 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Dùng URL.createObjectURL thay vì FileReader để tránh lag và lỗi màn hình đen
       if (cropImageSrc && cropImageSrc.startsWith('blob:')) {
          URL.revokeObjectURL(cropImageSrc);
       }
@@ -376,13 +361,10 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
     .is-animation { opacity: 0; }
     .is-animation.run-anim { opacity: 1; animation-fill-mode: both; }
 
-    /* CSS rules for IDs omitted for brevity, identical to previous version but assumed safe */
-    /* Updated critical CSS */
     .vertical-line {border-left: 1px solid #536077; height: 65px; position: absolute; top: 408.5px;}
     .form-input {width: 307px; height: 43px; background: #fff; border: 1px solid #8e0101; border-radius: 10px; padding: 0 10px; color: #990000; outline:none; font-family: 'Arial', sans-serif;}
     .form-btn {width: 168px; height: 43px; background: #fff; border-radius: 5px; color: #8e0101; font-weight: bold; text-transform: uppercase; border: none; cursor: pointer; box-shadow: 0 4px 4px rgba(0,0,0,0.25); display: flex; justify-content:center; align-items:center;}
     
-    /* Animation Keyframes ... */
     @keyframes fadeIn{from{opacity:0}to{opacity:1}}
     @keyframes fadeInUp{from{opacity:0;transform:translate3d(0,100%,0)}to{opacity:1;transform:none}}
     @keyframes fadeInDown{from{opacity:0;transform:translate3d(0,-100%,0)}to{opacity:1;transform:none}}
@@ -395,7 +377,6 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
     @keyframes flash{from,50%,to{opacity:1}25%,75%{opacity:0}}
     @keyframes slideInUp{from{transform:translate3d(0,100%,0);visibility:visible}to{transform:translate3d(0,0,0)}}
 
-    /* Specific ID styling from user code */
     #section-1 {height: 800px; background-image: url('https://content.pancake.vn/1/s840x1600/fwebp/fd/42/7d/0c/1ca1e8525f99e3105eb930cd8ed684a64b07a0d9df7e0c725ca9779c-w:1260-h:2400-l:65030-t:image/png.png');}
     #w-kb6stlwe{top:80px;left:3.5px;width:413px;height:60px;}
     #w-kb6stlwe h1{font-family:'UTM-Sloop-1.ttf', sans-serif;font-size:40px;text-align:center;text-shadow:0px 4px 4px #fff;color:#000; margin:0;}
@@ -793,7 +774,7 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
                  {(isEditMode && !readonly) && (
                     <button 
                         onClick={() => openTextEditor('googleSheetUrl', 'Link Google Sheet Script')}
-                        className="absolute z-50 w-8 h-8 bg-white rounded-full shadow-md flex items-center justify-center text-rose-600 hover:scale-110"
+                        className="absolute p-absolute z-50 w-8 h-8 bg-white rounded-full shadow-md flex items-center justify-center text-rose-600 hover:scale-110"
                         style={{top: '238px', right: '10px'}}
                         title="Cấu hình Google Sheet"
                     >
@@ -872,8 +853,10 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
             style={{animationDuration: '4s'}}
         >
             {isPlaying ? (
+               // Pause Icon
                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
             ) : (
+               // Play Icon
                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
             )}
             
