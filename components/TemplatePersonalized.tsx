@@ -474,7 +474,7 @@ export const TemplatePersonalized: React.FC<TemplatePersonalizedProps> = ({ data
       <AnimatePresence>
         {isCropping && cropImageSrc && (
             <div className="fixed inset-0 z-[1000] bg-black flex flex-col">
-                <div className="relative flex-1 bg-black"><Cropper image={cropImageSrc} crop={crop} zoom={zoom} aspect={currentAspect} rotation={rotation} onCropChange={setCrop} onCropComplete={(c, p) => setCroppedAreaPixels(p)} onZoomChange={setZoom} /></div>
+                <div className="relative flex-1 w-full bg-black"><Cropper image={cropImageSrc} crop={crop} zoom={zoom} aspect={currentAspect} rotation={rotation} onCropChange={setCrop} onCropComplete={(c, p) => setCroppedAreaPixels(p)} onZoomChange={setZoom} /></div>
                 <div className="bg-white p-4 flex flex-col gap-3">
                      <div className="flex items-center gap-4">
                          <ZoomOut size={16} className="text-gray-400" />
