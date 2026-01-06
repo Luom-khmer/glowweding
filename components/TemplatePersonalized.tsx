@@ -972,8 +972,11 @@ export const TemplatePersonalized: React.FC<TemplatePersonalizedProps> = ({ data
             )}
         </AnimatePresence>
 
-        {/* Music Button - Moved to bottom-4 left-4 */}
-        <div className="fixed bottom-4 left-4 z-50">
+      </div>
+      </div>
+
+      {/* Music Button - Moved outside of containerRef to prevent transform context issues */}
+      <div className="fixed bottom-4 left-4 z-[9999]">
             <button 
                 type="button"
                 onClick={handleMusicClick}
@@ -992,10 +995,8 @@ export const TemplatePersonalized: React.FC<TemplatePersonalizedProps> = ({ data
                 )}
             </button>
             {(isEditMode && !readonly) && <div className="text-white text-xs bg-black/50 px-2 py-1 rounded mt-1 text-center">Đổi nhạc</div>}
-        </div>
+      </div>
 
-      </div>
-      </div>
     </div>
   );
 };
