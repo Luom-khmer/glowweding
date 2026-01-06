@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useRef } from 'react';
 import { InvitationData } from '../types';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -372,6 +371,10 @@ export const TemplatePersonalized: React.FC<TemplatePersonalizedProps> = ({ data
   // Helper Data
   const safeDate = localData.date || new Date().toISOString().split('T')[0];
   const [year, month, day] = safeDate.split('-').map(Number);
+  const dateObj = new Date(year, month - 1, day);
+  const daysOfWeek = ['Chủ Nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
+  const dayOfWeek = daysOfWeek[dateObj.getDay()];
+
   const getAlbumImg = (idx: number) => localData.albumImages?.[idx] || 'https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=800&auto=format&fit=crop';
   const getGalleryImg = (idx: number) => localData.galleryImages?.[idx] || 'https://images.unsplash.com/photo-1532712938310-34cb3982ef74?q=80&w=600&auto=format&fit=crop';
 
@@ -684,37 +687,44 @@ export const TemplatePersonalized: React.FC<TemplatePersonalizedProps> = ({ data
                  <EditableWrapper field="galleryImages-2" isText={false} aspect={116/165} className="w-full h-full border-[3px] border-white shadow-md"><CinematicImage src={getGalleryImg(2)} enableKenBurns={true} /></EditableWrapper>
             </motion.div>
 
-            <motion.div variants={fadeIn} initial="hidden" whileInView="visible" viewport={{once:true}} className="abs w-full text-center" style={{top:'317.7px', left:'-3.5px', width:'427px'}}>
-                <p style={{fontSize:'14px', fontFamily:'Arial, sans-serif', letterSpacing:'1px'}}>THAM DỰ TIỆC MỪNG LỄ THÀNH HÔN<br/>Vào Lúc</p>
+            <motion.div variants={fadeIn} initial="hidden" whileInView="visible" viewport={{once:true}} className="abs w-full text-center" style={{top:'310px', left:'0', width:'420px'}}>
+                <p style={{fontSize:'15px', fontFamily:'Arial, sans-serif', letterSpacing:'1px', lineHeight:'1.5', textTransform:'uppercase', color:'#000'}}>THAM DỰ TIỆC MỪNG LỄ THÀNH HÔN<br/><span style={{textTransform:'none'}}>Vào Lúc</span></p>
             </motion.div>
 
-            {/* Calendar Parts */}
-            <motion.div variants={zoomIn} initial="hidden" whileInView="visible" viewport={{once:true}} className="abs text-center" style={{top:'390px', left:'114.6px', width:'185px'}}>
-                <EditableWrapper field="date" label="Ngày" defaultFontSize={35} className="text-center">
-                    <p style={{fontSize:'35px', fontWeight:'bold', fontFamily:'Arial, sans-serif', letterSpacing:'3px'}}>{day}</p>
+            {/* Calendar Grid - Adjusted Layout */}
+            
+            {/* Left: Time */}
+            <div className="abs text-center" style={{top:'408px', left:'20px', width:'120px'}}>
+                <EditableWrapper field="time" label="Giờ" defaultFontSize={16}><p style={{fontSize:'16px', fontFamily:'Arial, sans-serif', color:'#000'}}>{localData.time ? localData.time.replace(':',' giờ ') : '10 giờ 00'}</p></EditableWrapper>
+            </div>
+
+            {/* Middle: Date Stack - Adjusted Top to 355px */}
+            <motion.div variants={fadeInDown} initial="hidden" whileInView="visible" viewport={{once:true}} className="abs text-center" style={{top:'355px', left:'150px', width:'120px'}}>
+                 <p style={{fontSize:'15px', fontFamily:'Arial, sans-serif', color:'#000', marginBottom:'5px'}}>{dayOfWeek}</p>
+            </motion.div>
+            <motion.div variants={zoomIn} initial="hidden" whileInView="visible" viewport={{once:true}} className="abs text-center" style={{top:'380px', left:'150px', width:'120px'}}>
+                <EditableWrapper field="date" label="Ngày" defaultFontSize={48} className="text-center">
+                    <p style={{fontSize:'48px', fontWeight:'bold', fontFamily:'Arial, sans-serif', color:'#000', lineHeight: 1}}>{day}</p>
                 </EditableWrapper>
             </motion.div>
-            <motion.div variants={fadeInDown} initial="hidden" whileInView="visible" viewport={{once:true}} className="abs text-center" style={{top:'376px', left:'114.6px', width:'185px'}}>
-                 <p style={{fontSize:'14px', fontFamily:'Arial, sans-serif', letterSpacing:'3px'}}>Thứ 5</p>
-            </motion.div>
-            <motion.div variants={fadeInUp} initial="hidden" whileInView="visible" viewport={{once:true}} className="abs text-center" style={{top:'441px', left:'114.6px', width:'185px'}}>
-                 <p style={{fontSize:'14px', fontFamily:'Arial, sans-serif', letterSpacing:'3px'}}>Tháng {month}</p>
+            <motion.div variants={fadeInUp} initial="hidden" whileInView="visible" viewport={{once:true}} className="abs text-center" style={{top:'435px', left:'150px', width:'120px'}}>
+                 <p style={{fontSize:'15px', fontFamily:'Arial, sans-serif', color:'#000'}}>Tháng {month}</p>
             </motion.div>
 
-            <div className="abs text-center" style={{top:'408.5px', left:'-9.8px', width:'185px'}}>
-                <EditableWrapper field="time" label="Giờ" defaultFontSize={14}><p style={{fontSize:'14px', fontFamily:'Arial, sans-serif', letterSpacing:'1px'}}>{localData.time.replace(':',' giờ ')}</p></EditableWrapper>
-            </div>
-            <div className="abs text-center" style={{top:'408.5px', left:'244.8px', width:'185px'}}>
-                <EditableWrapper field="date" label="Năm" defaultFontSize={14}><p style={{fontSize:'14px', fontFamily:'Arial, sans-serif', letterSpacing:'1px', fontWeight:'bold'}}>Năm {year}</p></EditableWrapper>
+            {/* Right: Year */}
+            <div className="abs text-center" style={{top:'408px', left:'280px', width:'120px'}}>
+                <EditableWrapper field="date" label="Năm" defaultFontSize={16}><p style={{fontSize:'16px', fontFamily:'Arial, sans-serif', color:'#000'}}>Năm {year}</p></EditableWrapper>
             </div>
             
-            {/* Vertical Lines */}
-            <motion.div variants={fadeIn} initial="hidden" whileInView="visible" viewport={{once:true}} className="abs" style={{borderLeft:'1px solid #536077', height:'65px', top:'408.5px', left:'95px', transform:'rotate(90deg)'}}></motion.div>
-            <motion.div variants={fadeIn} initial="hidden" whileInView="visible" viewport={{once:true}} className="abs" style={{borderLeft:'1px solid #536077', height:'65px', top:'408.5px', left:'250.6px', transform:'rotate(90deg)'}}></motion.div>
+            {/* Vertical Separator Lines */}
+            <motion.div variants={fadeIn} initial="hidden" whileInView="visible" viewport={{once:true}} className="abs" style={{borderLeft:'1px solid #536077', height:'80px', top:'375px', left:'145px'}}></motion.div>
+            <motion.div variants={fadeIn} initial="hidden" whileInView="visible" viewport={{once:true}} className="abs" style={{borderLeft:'1px solid #536077', height:'80px', top:'375px', left:'275px'}}></motion.div>
 
-            <div className="abs w-full text-center" style={{top:'482.5px', left:'-1px', width:'422px'}}>
-                <EditableWrapper field="lunarDate" label="Ngày Âm" defaultFontSize={14}><p style={{fontStyle:'italic', fontFamily:'Arial, sans-serif', fontSize:'14px'}}>{localData.lunarDate}</p></EditableWrapper>
+            {/* Lunar Date */}
+            <div className="abs w-full text-center" style={{top:'480px', left:'0', width:'420px'}}>
+                <EditableWrapper field="lunarDate" label="Ngày Âm" defaultFontSize={15}><p style={{fontStyle:'italic', fontFamily:'Arial, sans-serif', fontSize:'15px', color:'#000'}}>{localData.lunarDate}</p></EditableWrapper>
             </div>
+            
             <motion.div variants={fadeInUp} initial="hidden" whileInView="visible" viewport={{once:true}} className="abs bg-cover" style={{top:0, left:'127.5px', width:'165px', height:'35px', backgroundImage:'url("https://statics.pancake.vn/web-media/80/ac/eb/cf/85e75c674913047eea133813069cf9dc6d9a1acadb58c454077c94c5-w:500-h:500-l:9074-t:image/png.png")'}}></motion.div>
         </div>
 
