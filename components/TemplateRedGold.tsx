@@ -26,42 +26,6 @@ interface EditingFieldState {
     fontSize?: number;
 }
 
-// --- EFFECT COMPONENT ---
-const FallingEffect = () => {
-    const [leaves, setLeaves] = useState<any[]>([]);
-    
-    useEffect(() => {
-        // Tạo 15 hạt/lá rơi ngẫu nhiên
-        const count = 15;
-        const newLeaves = Array.from({ length: count }).map((_, i) => ({
-            id: i,
-            left: Math.random() * 100, // Vị trí ngang %
-            delay: Math.random() * 10, // Delay ngẫu nhiên
-            duration: 10 + Math.random() * 10, // Tốc độ rơi
-            size: 15 + Math.random() * 15 // Kích thước
-        }));
-        setLeaves(newLeaves);
-    }, []);
-
-    return (
-        <div className="absolute inset-0 pointer-events-none overflow-hidden z-[50] h-full w-full">
-            {leaves.map(leaf => (
-                <div 
-                    key={leaf.id}
-                    className="falling-leaf absolute"
-                    style={{
-                        left: `${leaf.left}%`,
-                        animationDelay: `-${leaf.delay}s`,
-                        animationDuration: `${leaf.duration}s`,
-                        width: `${leaf.size}px`,
-                        height: `${leaf.size}px`
-                    }}
-                />
-            ))}
-        </div>
-    );
-};
-
 export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialData, onSave, onAutosave, readonly = false, invitationId, guestName }) => {
   const [localData, setLocalData] = useState<InvitationData>(initialData);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -124,40 +88,28 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
     return () => clearTimeout(timer);
   }, [localData, isEditMode, onAutosave, readonly]);
 
-  // --- ANIMATION OBSERVER (Updated Logic) ---
+  // --- ANIMATION OBSERVER (FROM USER CODE) ---
   useEffect(() => {
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
                 const el = entry.target as HTMLElement;
-                
-                // Lấy các thông số từ thẻ HTML
                 const animName = el.getAttribute('data-anim');
                 const duration = el.getAttribute('data-duration') || '1s';
                 const delay = el.getAttribute('data-delay') || '0s';
-                
                 if (animName) {
-                    // Gán CSS vào phần tử
                     el.style.animationName = animName;
                     el.style.animationDuration = duration;
                     el.style.animationDelay = delay;
-                    
-                    // Thêm class để bắt đầu chạy
                     el.classList.add('run-anim');
-                    
-                    // Chạy xong rồi thì thôi, không theo dõi nữa
                     observer.unobserve(el);
                 }
             }
         });
-    }, { threshold: 0.1 }); // Kích hoạt khi phần tử hiện ra 10%
+    }, { threshold: 0.1 });
 
-    // Tìm tất cả các phần tử có class 'is-animation' để theo dõi
-    // Timeout nhỏ để đảm bảo DOM đã render xong khi data thay đổi
-    setTimeout(() => {
-        const elements = document.querySelectorAll('.is-animation');
-        elements.forEach(el => observer.observe(el));
-    }, 100);
+    const elements = document.querySelectorAll('.is-animation');
+    elements.forEach(el => observer.observe(el));
 
     // Auto play music check
     const playAudio = async () => {
@@ -174,7 +126,7 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
     document.addEventListener('click', playAudio, { once: true });
 
     return () => observer.disconnect();
-  }, [localData]); // Re-run when data changes
+  }, [localData]); // Re-run when data changes (re-render)
 
   const handleMusicClick = () => {
       if (isEditMode && !readonly) {
@@ -276,20 +228,29 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
       }
   };
 
+  // Map fields to Aspect Ratios based on pixel dimensions in CSS
   const getAspectRatioForField = (field: string): number => {
-      if (field === 'imageUrl') return 249 / 373;
-      if (field === 'centerImage') return 354 / 269;
-      if (field === 'footerImage') return 854 / 1280;
+      if (field === 'imageUrl') return 249 / 373; // #w-01kq9cgt
+      if (field === 'centerImage') return 354 / 269; // #w-y7yn4bui
+      if (field === 'footerImage') return 854 / 1280; // #w-l2pipleo background (approx)
       if (field === 'qrCodeUrl') return 1;
       
-      if (field.startsWith('albumImages-')) {
-         const idx = parseInt(field.split('-')[1]);
-         if ([0,1,2].includes(idx)) return 179 / 268;
-         if ([3,4].includes(idx)) return 179 / 116;
-         return 178 / 267; // 5,6,7,8
-      }
+      // Albums
+      if (field === 'albumImages-0') return 179 / 268;
+      if (field === 'albumImages-1') return 179 / 268;
+      if (field === 'albumImages-2') return 179 / 268;
+      if (field === 'albumImages-3') return 179 / 116;
+      if (field === 'albumImages-4') return 179 / 116;
+      if (field === 'albumImages-5') return 178 / 267;
+      if (field === 'albumImages-6') return 178 / 267;
+      if (field === 'albumImages-7') return 178 / 267;
+      if (field === 'albumImages-8') return 178 / 267;
       
-      if (field.startsWith('galleryImages-')) return 116 / 165;
+      // Gallery (Section 3)
+      if (field === 'galleryImages-0') return 116 / 165;
+      if (field === 'galleryImages-1') return 116 / 165;
+      if (field === 'galleryImages-2') return 116 / 165;
+
       return 1;
   }
 
@@ -353,15 +314,17 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
 
   const handleSave = () => { setIsEditMode(false); if (onSave) onSave(localData); };
 
+  // --- Wrapper Component for Edit Mode ---
   const EditableWrapper = ({ children, field, label, isText = true, defaultFontSize = 14, className = "", style = {}, onClick, ...props }: any) => {
       const handleClick = (e: React.MouseEvent) => {
-          e.stopPropagation();
+          e.stopPropagation(); // Stop propagation to prevent music toggle etc.
           if (onClick && !isEditMode) { onClick(); return; }
           if (!isEditMode || readonly) return;
           if (isText) openTextEditor(field, label, defaultFontSize); else triggerImageUpload(field);
       };
       
       const storedStyle = localData.elementStyles?.[field] || {};
+      // Merge styles. Note: className handles positioning in this template via IDs usually, so style is mostly for fonts
       const appliedStyle: React.CSSProperties = { ...style, fontSize: storedStyle.fontSize ? `${storedStyle.fontSize}px` : undefined };
       
       const editContainerStyles: React.CSSProperties = (isEditMode && !readonly) ? {
@@ -382,9 +345,12 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
 
   const getAlbumImg = (idx: number) => localData.albumImages?.[idx] || '';
   const getGalleryImg = (idx: number) => localData.galleryImages?.[idx] || '';
+  
+  // Date parsing
   const safeDate = localData.date || new Date().toISOString().split('T')[0];
   const [year, month, day] = safeDate.split('-').map(Number);
   
+  // Custom CSS based on User's Code
   const css = `
     @font-face{font-family: "UTM-Cafeta.ttf"; src: url("https://statics.pancake.vn/web-media/04/eb/01/7a/e19221a44fabb6fd54c6339fd43b1c25ebbe20e97f6633beed4cbc79-w:0-h:0-l:31525-t:application/octet-stream.ttf") format("truetype"); font-display:swap;}
     @font-face{font-family: "Ephesis-Regular.ttf"; src: url("https://statics.pancake.vn/web-media/65/48/68/4f/ca5a0c732f276b6fef504eddf0e2d6cdf65cf198b0440dde6d90c5a8-w:0-h:0-l:141767-t:application/octet-stream.ttf") format("truetype"); font-display:swap;}
@@ -402,7 +368,7 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
     .full-width{width:100%} .full-height{height:100%}
     .image-background{background-position:center center;background-size:cover;background-repeat:no-repeat;width:100%;height:100%}
     
-    /* Animation Keyframes */
+    /* Animation */
     @keyframes fadeIn{from{opacity:0}to{opacity:1}}
     @keyframes fadeInUp{from{opacity:0;transform:translate3d(0,100%,0)}to{opacity:1;transform:none}}
     @keyframes fadeInDown{from{opacity:0;transform:translate3d(0,-100%,0)}to{opacity:1;transform:none}}
@@ -414,22 +380,6 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
     @keyframes slideInRight{from{transform:translate3d(100%,0,0);visibility:visible}to{transform:translate3d(0,0,0)}}
     @keyframes flash{from,50%,to{opacity:1}25%,75%{opacity:0}}
     
-    /* Falling Leaf Animation */
-    .falling-leaf {
-        background-image: url('https://statics.pancake.vn/web-media/5d/4d/ed/50/c176e3fd3e67b078488c02451f6a09af9fe9e929c4f113f5c162595e-w:500-h:500-l:22239-t:image/png.png');
-        background-size: contain;
-        background-repeat: no-repeat;
-        opacity: 0.8;
-        animation: falling linear infinite;
-    }
-    @keyframes falling {
-        0% { transform: translate(0, -10vh) rotate(0deg); opacity: 0; }
-        10% { opacity: 0.8; }
-        90% { opacity: 0.8; }
-        100% { transform: translate(0, 100vh) rotate(360deg); opacity: 0; }
-    }
-    
-    /* Animation Classes */
     .is-animation { opacity: 0; }
     .is-animation.run-anim { opacity: 1; animation-fill-mode: both; }
 
@@ -576,11 +526,8 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
             width: '420px', 
             marginBottom: `-${(1 - scale) * 3000}px` 
         }}
-        className="shrink-0 relative"
+        className="shrink-0"
       >
-      
-      {/* HIỆU ỨNG RƠI LẤP LÁNH (CHỈ HIỂN THỊ TRONG KHUNG 420px) */}
-      <FallingEffect />
 
       {/* Cropper Modal */}
       <AnimatePresence>
@@ -727,7 +674,7 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
             </EditableWrapper>
             
             <div id="line-left" className="vertical-line is-animation" data-anim="fadeIn" data-duration="3s"></div>
-            <div id="line-right" className="vertical-line is-animation" data-anim="fadeIn" data-duration="3s"></div>
+            <div id="line-right" class="vertical-line is-animation" data-anim="fadeIn" data-duration="3s"></div>
             
             <EditableWrapper field="lunarDate" label="Ngày Âm" defaultFontSize={14} id="w-s8t0kmal" className="p-absolute">
                 <p>{localData.lunarDate}</p>
