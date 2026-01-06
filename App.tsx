@@ -17,6 +17,7 @@ import { invitationService } from './services/invitationService';
 
 // Firebase Imports
 import { auth, googleProvider } from './services/firebase';
+import { signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
 
 const initialData: InvitationData = {
   groomName: 'Anh Tú',
@@ -186,7 +187,7 @@ function App() {
 
   const handleLogout = async () => {
     try {
-        await auth.signOut();
+        await signOut(auth);
         setUser(null);
         setView('home');
         setIsMenuOpen(false);
@@ -198,7 +199,7 @@ function App() {
   const handleFirebaseLogin = async () => {
     setIsLoadingAuth(true);
     try {
-        const result = await auth.signInWithPopup(googleProvider);
+        const result = await signInWithPopup(auth, googleProvider);
         const syncedUser = await userService.syncUser(result.user);
         setUser(syncedUser);
         setView('home');
@@ -311,7 +312,7 @@ function App() {
   };
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(async (currentUser: any) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
         if (currentUser) {
             try {
                 const syncedUser = await userService.syncUser(currentUser);

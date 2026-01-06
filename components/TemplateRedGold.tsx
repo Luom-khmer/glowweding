@@ -1,6 +1,5 @@
 
 import React, { useEffect, useState, useRef } from 'react';
-import { createPortal } from 'react-dom';
 import { InvitationData } from '../types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Pencil, Check, ZoomIn, ZoomOut, RotateCw, Loader2, Link, UploadCloud, Upload } from 'lucide-react';
@@ -27,11 +26,6 @@ interface EditingFieldState {
     fontSize?: number;
 }
 
-const ModalPortal = ({ children }: { children?: React.ReactNode }) => {
-    if (typeof document === 'undefined' || !children) return null;
-    return createPortal(children, document.body);
-};
-
 export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialData, onSave, onAutosave, readonly = false, invitationId, guestName }) => {
   const [localData, setLocalData] = useState<InvitationData>(initialData);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -41,15 +35,18 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [editingField, setEditingField] = useState<EditingFieldState | null>(null);
   
+  // Scaling Logic
   const [scale, setScale] = useState(1);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // RSVP Logic
   const [guestNameInput, setGuestNameInput] = useState(guestName || ''); 
   const [guestRelation, setGuestRelation] = useState(''); 
   const [guestWishes, setGuestWishes] = useState('');
   const [attendance, setAttendance] = useState('Có Thể Tham Dự');
   const [isSubmittingRSVP, setIsSubmittingRSVP] = useState(false);
 
+  // Crop Logic
   const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
@@ -63,10 +60,11 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
   const musicInputRef = useRef<HTMLInputElement>(null);
   const activeImageFieldRef = useRef<string | null>(null);
 
+  // --- SCALING EFFECT ---
   useEffect(() => {
     const handleResize = () => {
         const windowWidth = window.innerWidth;
-        const DESIGN_WIDTH = 420; 
+        const DESIGN_WIDTH = 420; // Fixed width from user CSS
         if (windowWidth < DESIGN_WIDTH) {
             setScale(windowWidth / DESIGN_WIDTH);
         } else {
@@ -78,6 +76,7 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // --- AUTOSAVE ---
   useEffect(() => {
     if (!isEditMode || readonly || !onAutosave) return;
     setSaveStatus('saving');
@@ -89,6 +88,7 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
     return () => clearTimeout(timer);
   }, [localData, isEditMode, onAutosave, readonly]);
 
+  // --- ANIMATION OBSERVER (FROM USER CODE) ---
   useEffect(() => {
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
@@ -111,26 +111,22 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
     const elements = document.querySelectorAll('.is-animation');
     elements.forEach(el => observer.observe(el));
 
+    // Auto play music check
     const playAudio = async () => {
         if (audioRef.current && !isPlaying) {
              try {
                 await audioRef.current.play();
                 setIsPlaying(true);
-             } catch(e) {}
+             } catch(e) {
+                 // Autoplay policy prevented
+             }
         }
     }
+    // Try auto play on first interaction
     document.addEventListener('click', playAudio, { once: true });
 
     return () => observer.disconnect();
-  }, [localData]);
-
-  useEffect(() => {
-      return () => {
-          if (cropImageSrc && cropImageSrc.startsWith('blob:')) {
-              URL.revokeObjectURL(cropImageSrc);
-          }
-      };
-  }, [cropImageSrc]);
+  }, [localData]); // Re-run when data changes (re-render)
 
   const handleMusicClick = () => {
       if (isEditMode && !readonly) {
@@ -232,16 +228,29 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
       }
   };
 
+  // Map fields to Aspect Ratios based on pixel dimensions in CSS
   const getAspectRatioForField = (field: string): number => {
-      if (field === 'imageUrl') return 249 / 373;
-      if (field === 'centerImage') return 354 / 269;
-      if (field === 'footerImage') return 854 / 1280;
+      if (field === 'imageUrl') return 249 / 373; // #w-01kq9cgt
+      if (field === 'centerImage') return 354 / 269; // #w-y7yn4bui
+      if (field === 'footerImage') return 854 / 1280; // #w-l2pipleo background (approx)
       if (field === 'qrCodeUrl') return 1;
-      if (field.startsWith('albumImages-')) {
-          if (field.includes('-3') || field.includes('-4')) return 179 / 116;
-          return 179 / 268;
-      }
-      if (field.startsWith('galleryImages-')) return 116 / 165;
+      
+      // Albums
+      if (field === 'albumImages-0') return 179 / 268;
+      if (field === 'albumImages-1') return 179 / 268;
+      if (field === 'albumImages-2') return 179 / 268;
+      if (field === 'albumImages-3') return 179 / 116;
+      if (field === 'albumImages-4') return 179 / 116;
+      if (field === 'albumImages-5') return 178 / 267;
+      if (field === 'albumImages-6') return 178 / 267;
+      if (field === 'albumImages-7') return 178 / 267;
+      if (field === 'albumImages-8') return 178 / 267;
+      
+      // Gallery (Section 3)
+      if (field === 'galleryImages-0') return 116 / 165;
+      if (field === 'galleryImages-1') return 116 / 165;
+      if (field === 'galleryImages-2') return 116 / 165;
+
       return 1;
   }
 
@@ -255,15 +264,15 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (cropImageSrc && cropImageSrc.startsWith('blob:')) {
-         URL.revokeObjectURL(cropImageSrc);
-      }
-      const objectUrl = URL.createObjectURL(file);
-      setCropImageSrc(objectUrl);
-      setIsCropping(true);
-      setZoom(1);
-      setRotation(0);
-      setCrop({ x: 0, y: 0 });
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setCropImageSrc(reader.result as string);
+        setIsCropping(true);
+        setZoom(1);
+        setRotation(0);
+        setCrop({ x: 0, y: 0 });
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -297,11 +306,7 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
            }
            return newData;
         });
-        
         setIsCropping(false);
-        if (cropImageSrc.startsWith('blob:')) {
-            URL.revokeObjectURL(cropImageSrc);
-        }
         setCropImageSrc(null);
         activeImageFieldRef.current = null;
       } catch (e) { console.error(e); }
@@ -309,15 +314,17 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
 
   const handleSave = () => { setIsEditMode(false); if (onSave) onSave(localData); };
 
+  // --- Wrapper Component for Edit Mode ---
   const EditableWrapper = ({ children, field, label, isText = true, defaultFontSize = 14, className = "", style = {}, onClick, ...props }: any) => {
       const handleClick = (e: React.MouseEvent) => {
-          e.stopPropagation();
+          e.stopPropagation(); // Stop propagation to prevent music toggle etc.
           if (onClick && !isEditMode) { onClick(); return; }
           if (!isEditMode || readonly) return;
           if (isText) openTextEditor(field, label, defaultFontSize); else triggerImageUpload(field);
       };
       
       const storedStyle = localData.elementStyles?.[field] || {};
+      // Merge styles. Note: className handles positioning in this template via IDs usually, so style is mostly for fonts
       const appliedStyle: React.CSSProperties = { ...style, fontSize: storedStyle.fontSize ? `${storedStyle.fontSize}px` : undefined };
       
       const editContainerStyles: React.CSSProperties = (isEditMode && !readonly) ? {
@@ -339,9 +346,11 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
   const getAlbumImg = (idx: number) => localData.albumImages?.[idx] || '';
   const getGalleryImg = (idx: number) => localData.galleryImages?.[idx] || '';
   
+  // Date parsing
   const safeDate = localData.date || new Date().toISOString().split('T')[0];
   const [year, month, day] = safeDate.split('-').map(Number);
   
+  // Custom CSS based on User's Code
   const css = `
     @font-face{font-family: "UTM-Cafeta.ttf"; src: url("https://statics.pancake.vn/web-media/04/eb/01/7a/e19221a44fabb6fd54c6339fd43b1c25ebbe20e97f6633beed4cbc79-w:0-h:0-l:31525-t:application/octet-stream.ttf") format("truetype"); font-display:swap;}
     @font-face{font-family: "Ephesis-Regular.ttf"; src: url("https://statics.pancake.vn/web-media/65/48/68/4f/ca5a0c732f276b6fef504eddf0e2d6cdf65cf198b0440dde6d90c5a8-w:0-h:0-l:141767-t:application/octet-stream.ttf") format("truetype"); font-display:swap;}
@@ -354,17 +363,12 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
     @font-face{font-family: "SVN-Gilroy-Bold-Italic.otf"; src: url("https://fonts.gstatic.com/s/roboto/v29/KFOjCnqEu92Fr1Mu51TzBwc4EsA.woff2") format("woff2");}
 
     .pageview{width:420px; background:#fff; overflow:hidden; position:relative; box-shadow: 0 0 20px rgba(0,0,0,0.1); margin: 0 auto;}
+    
     .p-absolute{position:absolute} .p-relative{position:relative}
     .full-width{width:100%} .full-height{height:100%}
     .image-background{background-position:center center;background-size:cover;background-repeat:no-repeat;width:100%;height:100%}
     
-    .is-animation { opacity: 0; }
-    .is-animation.run-anim { opacity: 1; animation-fill-mode: both; }
-
-    .vertical-line {border-left: 1px solid #536077; height: 65px; position: absolute; top: 408.5px;}
-    .form-input {width: 307px; height: 43px; background: #fff; border: 1px solid #8e0101; border-radius: 10px; padding: 0 10px; color: #990000; outline:none; font-family: 'Arial', sans-serif;}
-    .form-btn {width: 168px; height: 43px; background: #fff; border-radius: 5px; color: #8e0101; font-weight: bold; text-transform: uppercase; border: none; cursor: pointer; box-shadow: 0 4px 4px rgba(0,0,0,0.25); display: flex; justify-content:center; align-items:center;}
-    
+    /* Animation */
     @keyframes fadeIn{from{opacity:0}to{opacity:1}}
     @keyframes fadeInUp{from{opacity:0;transform:translate3d(0,100%,0)}to{opacity:1;transform:none}}
     @keyframes fadeInDown{from{opacity:0;transform:translate3d(0,-100%,0)}to{opacity:1;transform:none}}
@@ -375,8 +379,11 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
     @keyframes slideInLeft{from{transform:translate3d(-100%,0,0);visibility:visible}to{transform:translate3d(0,0,0)}}
     @keyframes slideInRight{from{transform:translate3d(100%,0,0);visibility:visible}to{transform:translate3d(0,0,0)}}
     @keyframes flash{from,50%,to{opacity:1}25%,75%{opacity:0}}
-    @keyframes slideInUp{from{transform:translate3d(0,100%,0);visibility:visible}to{transform:translate3d(0,0,0)}}
+    
+    .is-animation { opacity: 0; }
+    .is-animation.run-anim { opacity: 1; animation-fill-mode: both; }
 
+    /* SPECIFIC IDs MAPPING */
     #section-1 {height: 800px; background-image: url('https://content.pancake.vn/1/s840x1600/fwebp/fd/42/7d/0c/1ca1e8525f99e3105eb930cd8ed684a64b07a0d9df7e0c725ca9779c-w:1260-h:2400-l:65030-t:image/png.png');}
     #w-kb6stlwe{top:80px;left:3.5px;width:413px;height:60px;}
     #w-kb6stlwe h1{font-family:'UTM-Sloop-1.ttf', sans-serif;font-size:40px;text-align:center;text-shadow:0px 4px 4px #fff;color:#000; margin:0;}
@@ -398,6 +405,8 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
     #w-zvm741p4{top:755.8px;left:92px;width:236px;border-bottom: 1px dotted #000;} 
     #w-1j4sk2pp{top:0;left:420px;width:420px;height:800px;pointer-events:none;}
     #w-lra9lkfk{top:0;left:-420px;width:420px;height:800px;pointer-events:none;}
+
+    /* Section 2 */
     #section-2 {height: 714px; background-image: url('https://content.pancake.vn/1/s840x1600/fwebp/fd/42/7d/0c/1ca1e8525f99e3105eb930cd8ed684a64b07a0d9df7e0c725ca9779c-w:1260-h:2400-l:65030-t:image/png.png');}
     #w-7sjvq3be{top:243.5px;left:58px;width:304px;}
     #w-7sjvq3be h2{font-family:'BlackMango-Medium.otf',sans-serif;font-size:14px;text-align:center; margin:0;}
@@ -417,6 +426,8 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
     #w-y1s24e6p{top:171px;left:21.5px;width:165px;font-size:13px;text-align:center;}
     #w-zp11tpir{top:0;left:167px;width:86px;height:86px;}
     #w-dsdbdzxr{top:65px;left:176px;width:68px;height:68px;}
+
+    /* Section 3 */
     #section-3 {height: 515px; background-image: url('https://content.pancake.vn/1/s840x1600/fwebp/fd/42/7d/0c/1ca1e8525f99e3105eb930cd8ed684a64b07a0d9df7e0c725ca9779c-w:1260-h:2400-l:65030-t:image/png.png');}
     #w-qube8kir{top:390px;left:114.6px;width:185px;}
     #w-qube8kir p{font-family:'Arial',sans-serif;font-size:35px;font-weight:bold;letter-spacing:3px;text-align:center; margin:0;}
@@ -438,8 +449,11 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
     #w-14ongvqg p{font-family:'Arial',sans-serif;font-size:14px;letter-spacing:3px;text-align:center; margin:0;}
     #w-tfi5tzev{top:441px;left:114.6px;width:185px;}
     #w-tfi5tzev p{font-family:'Arial',sans-serif;font-size:14px;letter-spacing:3px;text-align:center; margin:0;}
+    .vertical-line {border-left: 1px solid #536077; height: 65px; position: absolute; top: 408.5px;}
     #line-left {left: 95px; transform: rotate(90deg);}
     #line-right {left: 250.6px; transform: rotate(90deg);}
+
+    /* Section 4 Map */
     #section-4 {height: 605px; background-image: url('https://content.pancake.vn/1/s840x1600/fwebp/fd/42/7d/0c/1ca1e8525f99e3105eb930cd8ed684a64b07a0d9df7e0c725ca9779c-w:1260-h:2400-l:65030-t:image/png.png');}
     #w-vdwipz9k{top:225px;left:22.5px;width:375px;height:375px;}
     #w-avv4pubr{top:11.5px;left:-3.5px;width:427px;}
@@ -451,13 +465,19 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
     #w-prbr1wdj{top:154px;left:137px;width:140px;height:32px;display:flex;justify-content:center;align-items:center;background:#b10000;color:#fff;border-radius:42px;text-decoration:none;font-family:'Arial',sans-serif;font-size:15px;box-shadow:0 4px 4px rgba(0,0,0,0.25);}
     #w-zajrqtwu{top:40px;left:53px;width:309px;height:168px;border: 2px solid #8e0101; border-radius: 16px;}
     #w-bv76anck{top:411.5px;left:288px;width:38px;height:38px;}
+
+    /* Section RSVP */
     #section-rsvp {height: 522px; background-image: url('https://content.pancake.vn/1/s840x1600/fwebp/fd/42/7d/0c/1ca1e8525f99e3105eb930cd8ed684a64b07a0d9df7e0c725ca9779c-w:1260-h:2400-l:65030-t:image/png.png');}
     #w-qp7zqavj{top:124.5px;left:35px;width:350px;height:312px;background:rgba(177, 0, 0, 1);border-radius:16px;border:1px solid #e5e7eb;}
     #w-yj0y61d2{top:14.3px;left:58px;width:304px;}
     #w-yj0y61d2 h2{font-family:'Ephesis-Regular.ttf',sans-serif;font-size:30px;line-height:1;text-align:center;color:#000; margin:0;}
     #w-d688ytkq{top:144px;left:56.5px;width:307px;height:277px;}
+    .form-input {width: 307px; height: 43px; background: #fff; border: 1px solid #8e0101; border-radius: 10px; padding: 0 10px; color: #990000; outline:none; font-family: 'Arial', sans-serif;}
+    .form-btn {width: 168px; height: 43px; background: #fff; border-radius: 5px; color: #8e0101; font-weight: bold; text-transform: uppercase; border: none; cursor: pointer; box-shadow: 0 4px 4px rgba(0,0,0,0.25); display: flex; justify-content:center; align-items:center;}
     #w-qbpa8242{top:456.4px;left:113px;width:194px;height:40px;display:flex;justify-content:center;align-items:center;background:#b10000;color:#fff;border-radius:9px;font-weight:bold;cursor:pointer;box-shadow:0 4px 4px rgba(0,0,0,0.25);font-family:'Arial', sans-serif;}
     #w-1gjqg7sh{top:0;left:-566px;width:350px;height:667px;pointer-events:none;}
+
+    /* Albums */
     #section-5 {height: 632px; background-image: url('https://content.pancake.vn/1/s840x1600/fwebp/fd/42/7d/0c/1ca1e8525f99e3105eb930cd8ed684a64b07a0d9df7e0c725ca9779c-w:1260-h:2400-l:65030-t:image/png.png');}
     #w-8job6w7j{top:0;left:20.5px;width:185px;}
     #w-8job6w7j p{font-family:'Ephesis-Regular.ttf',sans-serif;font-size:32px;text-align:center; margin:0;}
@@ -467,11 +487,14 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
     #w-ui8sxx6m{top:374.5px;left:214px;width:179px;height:116px;}
     #w-grkveilf{top:497px;left:214px;width:179px;height:116px;}
     #w-y4blj2tv{top:6.5px;left:214.5px;width:165px;height:35px;}
+
     #section-6 {height: 563px; background-image: url('https://content.pancake.vn/1/s840x1600/fwebp/fd/42/7d/0c/1ca1e8525f99e3105eb930cd8ed684a64b07a0d9df7e0c725ca9779c-w:1260-h:2400-l:65030-t:image/png.png');}
     #w-zzn6hpkr{top:283px;left:25.5px;width:178px;height:267px;}
     #w-jz70nzjp{top:283px;left:214px;width:178px;height:267px;}
     #w-05hqo9e4{top:6px;left:25px;width:178px;height:267px;}
     #w-m5s2x14e{top:6px;left:213.5px;width:178px;height:267px;}
+
+    /* Footer */
     #section-7 {height: 630px; position:relative;}
     #w-l2pipleo{top:0;left:0;width:420px;height:630px;}
     #w-k0ppg09a{top:427.5px;left:-30px;width:480px;}
@@ -479,6 +502,8 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
     #w-sram9ddz{top:338px;left:11px;width:397px;height:155px;}
     #w-way1u3f7{top:0;left:0;width:423px;height:630px;background:rgba(255, 255, 255, 0.62);}
     #w-ycfzoku0{top:354px;left:-17px;width:453px;height:147px;background:rgba(0, 0, 0, 0.48);}
+
+    /* Popup */
     #w-dut1632z{top:87.3px;left:85px;width:230px;height:227px;background:rgba(144, 39, 50, 1);}
     #w-30dwb5gn{top:14.5px;left:73px;width:254px;text-align:center;font-family:'Ephesis-Regular.ttf',sans-serif;font-size:40px;font-weight:bold;}
     #w-aiywg9g7{top:102px;left:101px;width:200px;height:198px;}
@@ -492,78 +517,7 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
       <input type="file" ref={musicInputRef} style={{ display: 'none' }} accept="audio/*" onChange={handleMusicChange} />
       <audio ref={audioRef} src={localData.musicUrl || "https://statics.pancake.vn/web-media/5e/ee/bf/4a/afa10d3bdf98ca17ec3191ebbfd3c829d135d06939ee1f1b712d731d-w:0-h:0-l:2938934-t:audio/mpeg.mp3"} loop />
 
-      {/* --- PORTALS --- */}
-      <AnimatePresence>
-        {isCropping && cropImageSrc && (
-            <ModalPortal>
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[10000] bg-black flex flex-col">
-                    <div className="relative flex-1 w-full bg-black overflow-hidden">
-                        <Cropper image={cropImageSrc} crop={crop} zoom={zoom} aspect={currentAspect} rotation={rotation} onCropChange={setCrop} onCropComplete={(c, p) => setCroppedAreaPixels(p)} onZoomChange={setZoom} />
-                    </div>
-                    <div className="bg-white p-4 pb-8 space-y-4 shrink-0">
-                         <div className="flex items-center gap-4"><span className="text-xs font-bold text-gray-500 uppercase w-12">Zoom</span><ZoomOut size={16} /><input type="range" value={zoom} min={1} max={3} step={0.1} onChange={(e) => setZoom(Number(e.target.value))} className="flex-1" /><ZoomIn size={16} /></div>
-                         <div className="flex items-center gap-4"><span className="text-xs font-bold text-gray-500 uppercase w-12">Xoay</span><RotateCw size={16} /><input type="range" value={rotation} min={0} max={360} step={1} onChange={(e) => setRotation(Number(e.target.value))} className="flex-1" /></div>
-                         <div className="flex gap-3 pt-2"><Button variant="secondary" className="flex-1" onClick={() => { setIsCropping(false); setCropImageSrc(null); if (cropImageSrc?.startsWith('blob:')) URL.revokeObjectURL(cropImageSrc); }}>Hủy</Button><Button className="flex-1" onClick={performCrop} icon={<Check className="w-4 h-4" />}>Cắt & Sử Dụng</Button></div>
-                    </div>
-                </motion.div>
-            </ModalPortal>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-          {editingField && (
-             <ModalPortal>
-                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm" onClick={() => setEditingField(null)}>
-                    <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} className="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-6 relative" onClick={e => e.stopPropagation()}>
-                        <div className="flex justify-between items-center mb-4 border-b pb-2"><h3 className="font-bold text-lg flex items-center gap-2"><Pencil className="w-5 h-5 text-rose-500" />{editingField.label}</h3><button onClick={() => setEditingField(null)} className="text-gray-400 hover:text-gray-600"><X /></button></div>
-                        <div className="mb-6 space-y-4">
-                            {(editingField.key !== 'mapUrl' && editingField.key !== 'googleSheetUrl') && <input type="range" min="10" max="80" step={1} value={editingField.fontSize || 14} onChange={(e) => setEditingField({ ...editingField, fontSize: parseInt(e.target.value) })} className="w-full h-2 bg-gray-200 rounded-lg accent-rose-600" />}
-                            {editingField.key === 'date' ? <input type="date" className="w-full p-3 border rounded-lg" value={editingField.value} onChange={(e) => setEditingField({ ...editingField, value: e.target.value })} /> : 
-                             (editingField.key === 'mapUrl' || editingField.key === 'googleSheetUrl') ? <input type="text" className="w-full p-3 border rounded-lg" value={editingField.value} onChange={(e) => setEditingField({ ...editingField, value: e.target.value })} /> : 
-                             <textarea autoFocus rows={4} className="w-full p-3 border rounded-lg" value={editingField.value} onChange={(e) => setEditingField({ ...editingField, value: e.target.value })} />}
-                        </div>
-                        <div className="flex justify-end gap-3"><Button variant="ghost" onClick={() => setEditingField(null)}>Hủy</Button><Button onClick={saveTextChange} icon={<Check className="w-4 h-4"/>}>Lưu Thay Đổi</Button></div>
-                    </motion.div>
-                 </motion.div>
-             </ModalPortal>
-          )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-          {showBankPopup && (
-              <ModalPortal>
-                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/50 z-[10000] flex items-center justify-center" onClick={() => setShowBankPopup(false)}>
-                      <div className="w-[400px] h-[381px] bg-white relative border border-gray-200" onClick={e => e.stopPropagation()}>
-                          <span className="absolute top-1 right-1 cursor-pointer text-2xl p-2 z-[10001]" onClick={() => setShowBankPopup(false)}>x</span>
-                          <div id="w-dut1632z" className="p-absolute"></div>
-                          <div id="w-30dwb5gn" className="p-absolute">Gửi Mừng Cưới</div>
-                          <EditableWrapper field="qrCodeUrl" isText={false} id="w-aiywg9g7" className="p-absolute">
-                              <div className="image-background" style={{backgroundImage: `url('${localData.qrCodeUrl || 'https://statics.pancake.vn/web-media/e2/bc/35/38/dc2d9ddf74d997785eb0c802bd3237a50de1118e505f1e0a89ae4ec1-w:592-h:1280-l:497233-t:image/png.png'}')`}}></div>
-                          </EditableWrapper>
-                          <EditableWrapper field="bankInfo" label="Thông Tin Ngân Hàng" defaultFontSize={17} id="w-xkuj2dzk" className="p-absolute">
-                              <div style={{whiteSpace: 'pre-line'}}>{localData.bankInfo}</div>
-                          </EditableWrapper>
-                      </div>
-                  </motion.div>
-              </ModalPortal>
-          )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-          {showSuccessModal && (
-              <ModalPortal>
-                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 z-[10000] flex items-center justify-center" onClick={() => setShowSuccessModal(false)}>
-                      <div className="bg-white p-8 rounded-xl text-center max-w-sm m-4">
-                          <h3 className="text-2xl font-bold text-rose-600 mb-2 font-serif">Cảm ơn bạn!</h3>
-                          <p className="text-gray-600">Lời chúc của bạn đã được gửi đến cô dâu chú rể.</p>
-                          <Button className="mt-4" onClick={() => setShowSuccessModal(false)}>Đóng</Button>
-                      </div>
-                  </motion.div>
-              </ModalPortal>
-          )}
-      </AnimatePresence>
-
-      {/* Wrapper Scale */}
+      {/* Wrapper để xử lý Scale */}
       <div 
         ref={containerRef}
         style={{
@@ -575,8 +529,41 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
         className="shrink-0"
       >
 
+      {/* Cropper Modal */}
+      <AnimatePresence>
+        {isCropping && cropImageSrc && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[1000] bg-black flex flex-col">
+                <div className="relative flex-1 w-full bg-black"><Cropper image={cropImageSrc} crop={crop} zoom={zoom} aspect={currentAspect} rotation={rotation} onCropChange={setCrop} onCropComplete={(c, p) => setCroppedAreaPixels(p)} onZoomChange={setZoom} /></div>
+                <div className="bg-white p-4 pb-8 space-y-4">
+                     <div className="flex items-center gap-4"><span className="text-xs font-bold text-gray-500 uppercase w-12">Zoom</span><ZoomOut size={16} /><input type="range" value={zoom} min={1} max={3} step={0.1} onChange={(e) => setZoom(Number(e.target.value))} className="flex-1" /><ZoomIn size={16} /></div>
+                     <div className="flex items-center gap-4"><span className="text-xs font-bold text-gray-500 uppercase w-12">Xoay</span><RotateCw size={16} /><input type="range" value={rotation} min={0} max={360} step={1} onChange={(e) => setRotation(Number(e.target.value))} className="flex-1" /></div>
+                     <div className="flex gap-3 pt-2"><Button variant="secondary" className="flex-1" onClick={() => { setIsCropping(false); setCropImageSrc(null); }}>Hủy</Button><Button className="flex-1" onClick={performCrop} icon={<Check className="w-4 h-4" />}>Cắt & Sử Dụng</Button></div>
+                </div>
+            </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Text Editor Modal */}
+      <AnimatePresence>
+          {editingField && (
+             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm" onClick={() => setEditingField(null)}>
+                <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} className="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-6 relative" onClick={e => e.stopPropagation()}>
+                    <div className="flex justify-between items-center mb-4 border-b pb-2"><h3 className="font-bold text-lg flex items-center gap-2"><Pencil className="w-5 h-5 text-rose-500" />{editingField.label}</h3><button onClick={() => setEditingField(null)} className="text-gray-400 hover:text-gray-600"><X /></button></div>
+                    <div className="mb-6 space-y-4">
+                        {(editingField.key !== 'mapUrl' && editingField.key !== 'googleSheetUrl') && <input type="range" min="10" max="80" step={1} value={editingField.fontSize || 14} onChange={(e) => setEditingField({ ...editingField, fontSize: parseInt(e.target.value) })} className="w-full h-2 bg-gray-200 rounded-lg accent-rose-600" />}
+                        {editingField.key === 'date' ? <input type="date" className="w-full p-3 border rounded-lg" value={editingField.value} onChange={(e) => setEditingField({ ...editingField, value: e.target.value })} /> : 
+                         (editingField.key === 'mapUrl' || editingField.key === 'googleSheetUrl') ? <input type="text" className="w-full p-3 border rounded-lg" value={editingField.value} onChange={(e) => setEditingField({ ...editingField, value: e.target.value })} /> : 
+                         <textarea autoFocus rows={4} className="w-full p-3 border rounded-lg" value={editingField.value} onChange={(e) => setEditingField({ ...editingField, value: e.target.value })} />}
+                    </div>
+                    <div className="flex justify-end gap-3"><Button variant="ghost" onClick={() => setEditingField(null)}>Hủy</Button><Button onClick={saveTextChange} icon={<Check className="w-4 h-4"/>}>Lưu Thay Đổi</Button></div>
+                </motion.div>
+             </motion.div>
+          )}
+      </AnimatePresence>
+
       <div className="pageview shadow-2xl relative">
         
+        {/* EDIT & SAVE BUTTONS */}
         {!readonly && (
             <div className="absolute top-4 right-4 z-[150] flex items-center gap-2">
                  {isEditMode && saveStatus !== 'idle' && <div className="bg-black/60 text-white px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-1.5">{saveStatus === 'saving' ? <><UploadCloud className="w-3 h-3 animate-bounce" /> Đang lưu...</> : <><Check className="w-3 h-3 text-green-400" /> Đã lưu</>}</div>}
@@ -602,6 +589,7 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
                 <h2>{localData.time ? `${localData.time} - ` : ''}THỨ 5</h2>
             </EditableWrapper>
             
+            {/* Decor Images */}
             <div id="w-lf6hdy88" className="p-absolute is-animation" data-anim="fadeIn" data-duration="7s"><div className="image-background" style={{backgroundImage: "url('https://content.pancake.vn/1/s487x487/fwebp/c9/7c/2a/c5/5ba36c13eb69d83d80e92d1a2eee50cfee36e987297533b6480719a7-w:500-h:500-l:12182-t:image/png.png')"}}></div></div>
             <div id="w-7r4uk9mb" className="p-absolute is-animation" data-anim="fadeIn" data-duration="7s"><div className="image-background" style={{backgroundImage: "url('https://statics.pancake.vn/web-media/b3/56/e9/68/af4129e31d91132cb5316f8ce714f78a520be70fd480db42ff8122ce-w:500-h:500-l:43453-t:image/png.png')"}}></div></div>
             <div id="w-xvsp4zia" className="p-absolute is-animation" data-anim="fadeIn" data-duration="7s"><div className="image-background" style={{backgroundImage: "url('https://statics.pancake.vn/web-media/b3/56/e9/68/af4129e31d91132cb5316f8ce714f78a520be70fd480db42ff8122ce-w:500-h:500-l:43453-t:image/png.png')"}}></div></div>
@@ -613,6 +601,7 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
             </div>
             <div id="w-zvm741p4" className="p-absolute is-animation" data-anim="zoomIn" data-duration="4s"></div>
             
+            {/* Curtains */}
             <div id="w-1j4sk2pp" className="p-absolute is-animation" data-anim="slideInLeft" data-duration="8s"><div className="image-background" style={{backgroundImage: "url('https://statics.pancake.vn/web-media/fb/1a/3d/db/5397c85e01e68520b6e686acfb8f4b71fc813f563e456d159b222a3c-w:1260-h:2400-l:1301050-t:image/png.png')"}}></div></div>
             <div id="w-lra9lkfk" className="p-absolute is-animation" data-anim="slideInRight" data-duration="8s"><div className="image-background" style={{backgroundImage: "url('https://statics.pancake.vn/web-media/0e/6c/18/fb/44e9347bb12368a07e646ad45939e6086fc1ce3b2b39c28663352c01-w:1260-h:2400-l:1296984-t:image/png.png')"}}></div></div>
         </div>
@@ -685,7 +674,7 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
             </EditableWrapper>
             
             <div id="line-left" className="vertical-line is-animation" data-anim="fadeIn" data-duration="3s"></div>
-            <div id="line-right" className="vertical-line is-animation" data-anim="fadeIn" data-duration="3s"></div>
+            <div id="line-right" class="vertical-line is-animation" data-anim="fadeIn" data-duration="3s"></div>
             
             <EditableWrapper field="lunarDate" label="Ngày Âm" defaultFontSize={14} id="w-s8t0kmal" className="p-absolute">
                 <p>{localData.lunarDate}</p>
@@ -867,9 +856,39 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
             )}
         </div>
 
+        {/* POPUPS */}
+        <AnimatePresence>
+            {showBankPopup && (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/50 z-[10000] flex items-center justify-center" onClick={() => setShowBankPopup(false)}>
+                    <div className="w-[400px] h-[381px] bg-white relative border border-gray-200" onClick={e => e.stopPropagation()}>
+                        <span className="absolute top-1 right-1 cursor-pointer text-2xl p-2 z-[10001]" onClick={() => setShowBankPopup(false)}>x</span>
+                        <div id="w-dut1632z" className="p-absolute"></div>
+                        <div id="w-30dwb5gn" className="p-absolute">Gửi Mừng Cưới</div>
+                        <EditableWrapper field="qrCodeUrl" isText={false} id="w-aiywg9g7" className="p-absolute">
+                            <div className="image-background" style={{backgroundImage: `url('${localData.qrCodeUrl || 'https://statics.pancake.vn/web-media/e2/bc/35/38/dc2d9ddf74d997785eb0c802bd3237a50de1118e505f1e0a89ae4ec1-w:592-h:1280-l:497233-t:image/png.png'}')`}}></div>
+                        </EditableWrapper>
+                        <EditableWrapper field="bankInfo" label="Thông Tin Ngân Hàng" defaultFontSize={17} id="w-xkuj2dzk" className="p-absolute">
+                            <div style={{whiteSpace: 'pre-line'}}>{localData.bankInfo}</div>
+                        </EditableWrapper>
+                    </div>
+                </motion.div>
+            )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+            {showSuccessModal && (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 z-[10000] flex items-center justify-center" onClick={() => setShowSuccessModal(false)}>
+                    <div className="bg-white p-8 rounded-xl text-center max-w-sm m-4">
+                        <h3 className="text-2xl font-bold text-rose-600 mb-2 font-serif">Cảm ơn bạn!</h3>
+                        <p className="text-gray-600">Lời chúc của bạn đã được gửi đến cô dâu chú rể.</p>
+                        <Button className="mt-4" onClick={() => setShowSuccessModal(false)}>Đóng</Button>
+                    </div>
+                </motion.div>
+            )}
+        </AnimatePresence>
+
       </div>
       </div>
     </div>
   );
 };
-    

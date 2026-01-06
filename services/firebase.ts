@@ -1,7 +1,9 @@
-import { getFirestore } from "firebase/firestore";
-import firebase from "firebase/compat/app";
-import "firebase/compat/auth";
 
+import { initializeApp } from "firebase/app";
+import { getAuth, GoogleAuthProvider } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
+
+// --- CẤU HÌNH CỦA BẠN ---
 const firebaseConfig = {
     apiKey: "AIzaSyAPvcz6uQkoFmU4nUmGinDiN_rwTS4eSEs",
     authDomain: "glowwedding-e5f9b.firebaseapp.com",
@@ -12,16 +14,8 @@ const firebaseConfig = {
     measurementId: "G-TCS6LG5RKL"
 };
 
-// Initialize Compat App (This creates the [DEFAULT] app used by modular SDKs too)
-if (!firebase.apps.length) {
-    firebase.initializeApp(firebaseConfig);
-} else {
-    firebase.app(); // Ensure default app is accessible
-}
-
-// Modular Firestore (uses the default app initialized above)
-export const db = getFirestore();
-
-// Compat Auth (for usage in App.tsx)
-export const auth = firebase.auth();
-export const googleProvider = new firebase.auth.GoogleAuthProvider();
+// Khởi tạo Firebase
+const app = initializeApp(firebaseConfig);
+export const auth = getAuth(app);
+export const googleProvider = new GoogleAuthProvider();
+export const db = getFirestore(app);
