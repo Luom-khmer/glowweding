@@ -459,17 +459,8 @@ export const TemplatePersonalized: React.FC<TemplatePersonalizedProps> = ({ data
       <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept="image/*" onChange={handleFileChange} />
       <input type="file" ref={musicInputRef} style={{ display: 'none' }} accept="audio/*" onChange={handleMusicChange} />
       
-      {/* Wrapper xử lý Scale */}
-      <div 
-        ref={containerRef}
-        style={{
-            transform: `scale(${scale})`,
-            transformOrigin: 'top center',
-            width: '420px',
-            marginBottom: `-${(1 - scale) * 3500}px` 
-        }}
-        className="shrink-0"
-      >
+      {/* --- MOVED MODALS OUTSIDE SCALED CONTAINER --- */}
+      
       {/* Cropper Modal */}
       <AnimatePresence>
         {isCropping && cropImageSrc && (
@@ -513,6 +504,75 @@ export const TemplatePersonalized: React.FC<TemplatePersonalizedProps> = ({ data
           )}
       </AnimatePresence>
 
+      {/* POPUPS moved outside */}
+      <AnimatePresence>
+            {showBankPopup && (
+                <motion.div 
+                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                    className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50"
+                    onClick={() => setShowBankPopup(false)}
+                >
+                    <motion.div className="relative bg-white w-[400px] h-[381px] border border-gray-200 shadow-xl" onClick={e => e.stopPropagation()}>
+                        <button onClick={() => setShowBankPopup(false)} className="absolute top-2 right-2 z-10 p-2"><X className="w-6 h-6 text-gray-500" /></button>
+                        <div className="abs pointer-events-none" style={{top: '87.3px', left: '85px', width: '230px', height: '227px', backgroundColor: 'rgba(144, 39, 50, 1)'}}></div>
+                        <div className="abs w-full text-center" style={{top: '14.5px', left:'73px', width:'254px'}}>
+                            <h2 style={{fontFamily: 'Ephesis-Regular, sans-serif', fontSize: '40px', fontWeight: 'bold'}}>Gửi Mừng Cưới</h2>
+                        </div>
+                        <EditableWrapper field="qrCode" isText={false} className="abs" style={{top: '102px', left: '101px', width: '200px', height: '198px', zIndex: 20}}>
+                             <div className="w-full h-full bg-cover" style={{backgroundImage: `url("${localData.qrCodeUrl || 'https://statics.pancake.vn/web-media/e2/bc/35/38/dc2d9ddf74d997785eb0c802bd3237a50de1118e505f1e0a89ae4ec1-w:592-h:1280-l:497233-t:image/png.png'}")`}}></div>
+                        </EditableWrapper>
+                        <div className="abs w-full text-center" style={{top: '323px', left:'22px', width:'356px', zIndex: 20}}>
+                            <EditableWrapper field="bankInfo" label="Thông Tin Ngân Hàng" className="text-[17px] font-bold inline-block bg-white/80 px-2 rounded">
+                                <h4 style={{whiteSpace: 'pre-line', fontFamily: 'Arial, sans-serif'}}>{localData.bankInfo}</h4>
+                            </EditableWrapper>
+                        </div>
+                    </motion.div>
+                </motion.div>
+            )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+            {showSuccessModal && (
+                <motion.div
+                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                    className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm"
+                    onClick={() => setShowSuccessModal(false)}
+                >
+                    <motion.div
+                        initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                        className="relative w-full max-w-sm bg-white rounded-xl overflow-hidden shadow-2xl"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <div className="relative aspect-[3/4] w-full">
+                             <img 
+                                src={localData.imageUrl || 'https://images.unsplash.com/photo-1606800052052-a08af7148866?q=80&w=1080&auto=format&fit=crop'} 
+                                className="w-full h-full object-cover" 
+                                alt="Thank you"
+                             />
+                             <div className="absolute top-1/2 left-0 w-full -translate-y-1/2 bg-black/40 py-8 backdrop-blur-[2px] text-center">
+                                <h2 style={{fontFamily: 'Ephesis-Regular, cursive'}} className="text-6xl text-white mb-2">thank you</h2>
+                                <p className="text-white text-lg tracking-wider italic">Rất hân hạnh được đón tiếp!</p>
+                             </div>
+                             <button onClick={() => setShowSuccessModal(false)} className="absolute top-2 right-2 text-white/80 hover:text-white bg-black/20 rounded-full p-1 transition-colors">
+                                <X size={24} />
+                             </button>
+                        </div>
+                    </motion.div>
+                </motion.div>
+            )}
+        </AnimatePresence>
+
+      {/* Wrapper xử lý Scale */}
+      <div 
+        ref={containerRef}
+        style={{
+            transform: `scale(${scale})`,
+            transformOrigin: 'top center',
+            width: '420px',
+            marginBottom: `-${(1 - scale) * 3500}px` 
+        }}
+        className="shrink-0"
+      >
       <div className="personalized-root shadow-2xl relative">
         <audio ref={audioRef} src={localData.musicUrl || "https://statics.pancake.vn/web-media/5e/ee/bf/4a/afa10d3bdf98ca17ec3191ebbfd3c829d135d06939ee1f1b712d731d-w:0-h:0-l:2938934-t:audio/mpeg.mp3"} loop />
         
@@ -871,7 +931,7 @@ export const TemplatePersonalized: React.FC<TemplatePersonalizedProps> = ({ data
                 </button>
             </motion.div>
             
-            <div className="abs pointer-events-none bg-cover" style={{top:0, left:'-566px', width:'350px', height:'667px', backgroundImage:'url("https://statics.pancake.vn/web-media/fd/42/7d/0c/1ca1e8525f99e3105eb930cd8ed684a64b07a0d9df7e0c725ca9779c-w:1260-h:2400-l:65030-t:image/png.png")'}}></div>
+            <div className="abs pointer-events-none bg-cover" style={{top:0, left:'-566px', width:'350px', height:'667px', backgroundImage:'url("https://statics.pancake.vn/web-media/fd/42/7d/0c/1ca1e8525f99e3105eb930cd8ed684a64b07a0d9df7e0c725ca9779c-w:1260-h:2400-l:65030-t:image/png.png")'}}></div >
         </div>
 
         {/* --- SECTION 6: ALBUM 1 --- */}
@@ -913,84 +973,25 @@ export const TemplatePersonalized: React.FC<TemplatePersonalizedProps> = ({ data
              </motion.div>
         </div>
 
-        {/* --- POPUPS --- */}
-        <AnimatePresence>
-            {showBankPopup && (
-                <motion.div 
-                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50"
-                    onClick={() => setShowBankPopup(false)}
-                >
-                    <motion.div className="relative bg-white w-[400px] h-[381px] border border-gray-200 shadow-xl" onClick={e => e.stopPropagation()}>
-                        <button onClick={() => setShowBankPopup(false)} className="absolute top-2 right-2 z-10 p-2"><X className="w-6 h-6 text-gray-500" /></button>
-                        <div className="abs pointer-events-none" style={{top: '87.3px', left: '85px', width: '230px', height: '227px', backgroundColor: 'rgba(144, 39, 50, 1)'}}></div>
-                        <div className="abs w-full text-center" style={{top: '14.5px', left:'73px', width:'254px'}}>
-                            <h2 style={{fontFamily: 'Ephesis-Regular, sans-serif', fontSize: '40px', fontWeight: 'bold'}}>Gửi Mừng Cưới</h2>
-                        </div>
-                        <EditableWrapper field="qrCode" isText={false} className="abs" style={{top: '102px', left: '101px', width: '200px', height: '198px', zIndex: 20}}>
-                             <div className="w-full h-full bg-cover" style={{backgroundImage: `url("${localData.qrCodeUrl || 'https://statics.pancake.vn/web-media/e2/bc/35/38/dc2d9ddf74d997785eb0c802bd3237a50de1118e505f1e0a89ae4ec1-w:592-h:1280-l:497233-t:image/png.png'}")`}}></div>
-                        </EditableWrapper>
-                        <div className="abs w-full text-center" style={{top: '323px', left:'22px', width:'356px', zIndex: 20}}>
-                            <EditableWrapper field="bankInfo" label="Thông Tin Ngân Hàng" className="text-[17px] font-bold inline-block bg-white/80 px-2 rounded">
-                                <h4 style={{whiteSpace: 'pre-line', fontFamily: 'Arial, sans-serif'}}>{localData.bankInfo}</h4>
-                            </EditableWrapper>
-                        </div>
-                    </motion.div>
-                </motion.div>
+        {/* Music Control Button */}
+        <div 
+            onClick={handleMusicClick}
+            className={`fixed left-4 bottom-4 z-[9999] w-[45px] h-[45px] bg-white/90 rounded-full flex justify-center items-center cursor-pointer shadow-md border border-gray-300 ${isPlaying ? 'animate-spin' : ''}`}
+            style={{animationDuration: '4s'}}
+        >
+            {isPlaying ? (
+               // Pause Icon
+               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+            ) : (
+               // Play Icon
+               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
             )}
-        </AnimatePresence>
-
-        <AnimatePresence>
-            {showSuccessModal && (
-                <motion.div
-                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm"
-                    onClick={() => setShowSuccessModal(false)}
-                >
-                    <motion.div
-                        initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-                        className="relative w-full max-w-sm bg-white rounded-xl overflow-hidden shadow-2xl"
-                        onClick={e => e.stopPropagation()}
-                    >
-                        <div className="relative aspect-[3/4] w-full">
-                             <img 
-                                src={localData.imageUrl || 'https://images.unsplash.com/photo-1606800052052-a08af7148866?q=80&w=1080&auto=format&fit=crop'} 
-                                className="w-full h-full object-cover" 
-                                alt="Thank you"
-                             />
-                             <div className="absolute top-1/2 left-0 w-full -translate-y-1/2 bg-black/40 py-8 backdrop-blur-[2px] text-center">
-                                <h2 style={{fontFamily: 'Ephesis-Regular, cursive'}} className="text-6xl text-white mb-2">thank you</h2>
-                                <p className="text-white text-lg tracking-wider italic">Rất hân hạnh được đón tiếp!</p>
-                             </div>
-                             <button onClick={() => setShowSuccessModal(false)} className="absolute top-2 right-2 text-white/80 hover:text-white bg-black/20 rounded-full p-1 transition-colors">
-                                <X size={24} />
-                             </button>
-                        </div>
-                    </motion.div>
-                </motion.div>
+            
+            {(isEditMode && !readonly) && (
+                <div className="absolute -top-1 -right-1 bg-rose-600 rounded-full p-1 w-5 h-5 flex items-center justify-center">
+                    <Upload className="w-6 h-6 text-white" />
+                </div>
             )}
-        </AnimatePresence>
-
-        {/* Music Button */}
-        <div className="fixed bottom-4 left-4 z-50">
-            <button 
-                type="button"
-                onClick={handleMusicClick}
-                className="w-14 h-14 bg-white/30 backdrop-blur rounded-full flex items-center justify-center shadow-lg cursor-pointer hover:scale-105 transition-transform border-none outline-none relative group"
-            >
-                {isPlaying ? 
-                    <img src="https://content.pancake.vn/1/31/08/c9/52/c9f574ca2fa8481e1c8c657100583ddfbf47e33427d480a7dc32e788-w:200-h:200-l:242141-t:image/gif.gif" className="w-11 h-11" alt="Music playing" />
-                    : 
-                    <img src="https://content.pancake.vn/1/02/d4/a7/88/fef5132f979892c1778a688f2039942fc24b396b332750179775f87e-w:200-h:200-l:8183-t:image/png.png" className="w-11 h-11" alt="Music paused" />
-                }
-                
-                {(isEditMode && !readonly) && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full">
-                        <Upload className="w-6 h-6 text-white" />
-                    </div>
-                )}
-            </button>
-            {(isEditMode && !readonly) && <div className="text-white text-xs bg-black/50 px-2 py-1 rounded mt-1 text-center">Đổi nhạc</div>}
         </div>
 
       </div>
@@ -998,3 +999,4 @@ export const TemplatePersonalized: React.FC<TemplatePersonalizedProps> = ({ data
     </div>
   );
 };
+    

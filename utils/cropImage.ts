@@ -4,7 +4,12 @@ export const createImage = (url: string): Promise<HTMLImageElement> =>
     const image = new Image()
     image.addEventListener('load', () => resolve(image))
     image.addEventListener('error', (error) => reject(error))
-    image.setAttribute('crossOrigin', 'anonymous') // needed to avoid cross-origin issues on CodeSandbox
+    
+    // Chỉ set crossOrigin nếu là ảnh từ URL (không phải base64/blob)
+    if (!url.startsWith('data:') && !url.startsWith('blob:')) {
+        image.setAttribute('crossOrigin', 'anonymous') 
+    }
+    
     image.src = url
   })
 
@@ -107,3 +112,4 @@ export default async function getCroppedImg(
   // Giảm chất lượng xuống 0.7 (70%) - Vẫn đủ đẹp cho web mobile nhưng giảm size đáng kể
   return outputCanvas.toDataURL('image/jpeg', 0.7);
 }
+    

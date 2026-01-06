@@ -517,18 +517,8 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
       <input type="file" ref={musicInputRef} style={{ display: 'none' }} accept="audio/*" onChange={handleMusicChange} />
       <audio ref={audioRef} src={localData.musicUrl || "https://statics.pancake.vn/web-media/5e/ee/bf/4a/afa10d3bdf98ca17ec3191ebbfd3c829d135d06939ee1f1b712d731d-w:0-h:0-l:2938934-t:audio/mpeg.mp3"} loop />
 
-      {/* Wrapper để xử lý Scale */}
-      <div 
-        ref={containerRef}
-        style={{
-            transform: `scale(${scale})`,
-            transformOrigin: 'top center',
-            width: '420px', 
-            marginBottom: `-${(1 - scale) * 3000}px` 
-        }}
-        className="shrink-0"
-      >
-
+      {/* --- MOVED MODALS OUTSIDE THE SCALED CONTAINER --- */}
+      
       {/* Cropper Modal */}
       <AnimatePresence>
         {isCropping && cropImageSrc && (
@@ -560,6 +550,49 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
              </motion.div>
           )}
       </AnimatePresence>
+
+      {/* POPUPS (Bank & Success) moved outside */}
+      <AnimatePresence>
+          {showBankPopup && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/50 z-[10000] flex items-center justify-center" onClick={() => setShowBankPopup(false)}>
+                  <div className="w-[400px] h-[381px] bg-white relative border border-gray-200" onClick={e => e.stopPropagation()}>
+                      <span className="absolute top-1 right-1 cursor-pointer text-2xl p-2 z-[10001]" onClick={() => setShowBankPopup(false)}>x</span>
+                      <div id="w-dut1632z" className="p-absolute"></div>
+                      <div id="w-30dwb5gn" className="p-absolute">Gửi Mừng Cưới</div>
+                      <EditableWrapper field="qrCodeUrl" isText={false} id="w-aiywg9g7" className="p-absolute">
+                          <div className="image-background" style={{backgroundImage: `url('${localData.qrCodeUrl || 'https://statics.pancake.vn/web-media/e2/bc/35/38/dc2d9ddf74d997785eb0c802bd3237a50de1118e505f1e0a89ae4ec1-w:592-h:1280-l:497233-t:image/png.png'}')`}}></div>
+                      </EditableWrapper>
+                      <EditableWrapper field="bankInfo" label="Thông Tin Ngân Hàng" defaultFontSize={17} id="w-xkuj2dzk" className="p-absolute">
+                          <div style={{whiteSpace: 'pre-line'}}>{localData.bankInfo}</div>
+                      </EditableWrapper>
+                  </div>
+              </motion.div>
+          )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+          {showSuccessModal && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 z-[10000] flex items-center justify-center" onClick={() => setShowSuccessModal(false)}>
+                  <div className="bg-white p-8 rounded-xl text-center max-w-sm m-4">
+                      <h3 className="text-2xl font-bold text-rose-600 mb-2 font-serif">Cảm ơn bạn!</h3>
+                      <p className="text-gray-600">Lời chúc của bạn đã được gửi đến cô dâu chú rể.</p>
+                      <Button className="mt-4" onClick={() => setShowSuccessModal(false)}>Đóng</Button>
+                  </div>
+              </motion.div>
+          )}
+      </AnimatePresence>
+
+      {/* Wrapper để xử lý Scale */}
+      <div 
+        ref={containerRef}
+        style={{
+            transform: `scale(${scale})`,
+            transformOrigin: 'top center',
+            width: '420px', 
+            marginBottom: `-${(1 - scale) * 3000}px` 
+        }}
+        className="shrink-0"
+      >
 
       <div className="pageview shadow-2xl relative">
         
@@ -856,39 +889,9 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
             )}
         </div>
 
-        {/* POPUPS */}
-        <AnimatePresence>
-            {showBankPopup && (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/50 z-[10000] flex items-center justify-center" onClick={() => setShowBankPopup(false)}>
-                    <div className="w-[400px] h-[381px] bg-white relative border border-gray-200" onClick={e => e.stopPropagation()}>
-                        <span className="absolute top-1 right-1 cursor-pointer text-2xl p-2 z-[10001]" onClick={() => setShowBankPopup(false)}>x</span>
-                        <div id="w-dut1632z" className="p-absolute"></div>
-                        <div id="w-30dwb5gn" className="p-absolute">Gửi Mừng Cưới</div>
-                        <EditableWrapper field="qrCodeUrl" isText={false} id="w-aiywg9g7" className="p-absolute">
-                            <div className="image-background" style={{backgroundImage: `url('${localData.qrCodeUrl || 'https://statics.pancake.vn/web-media/e2/bc/35/38/dc2d9ddf74d997785eb0c802bd3237a50de1118e505f1e0a89ae4ec1-w:592-h:1280-l:497233-t:image/png.png'}')`}}></div>
-                        </EditableWrapper>
-                        <EditableWrapper field="bankInfo" label="Thông Tin Ngân Hàng" defaultFontSize={17} id="w-xkuj2dzk" className="p-absolute">
-                            <div style={{whiteSpace: 'pre-line'}}>{localData.bankInfo}</div>
-                        </EditableWrapper>
-                    </div>
-                </motion.div>
-            )}
-        </AnimatePresence>
-
-        <AnimatePresence>
-            {showSuccessModal && (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 z-[10000] flex items-center justify-center" onClick={() => setShowSuccessModal(false)}>
-                    <div className="bg-white p-8 rounded-xl text-center max-w-sm m-4">
-                        <h3 className="text-2xl font-bold text-rose-600 mb-2 font-serif">Cảm ơn bạn!</h3>
-                        <p className="text-gray-600">Lời chúc của bạn đã được gửi đến cô dâu chú rể.</p>
-                        <Button className="mt-4" onClick={() => setShowSuccessModal(false)}>Đóng</Button>
-                    </div>
-                </motion.div>
-            )}
-        </AnimatePresence>
-
       </div>
       </div>
     </div>
   );
 };
+    
