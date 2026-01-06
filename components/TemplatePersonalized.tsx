@@ -971,7 +971,7 @@ export const TemplatePersonalized: React.FC<TemplatePersonalizedProps> = ({ data
             )}
         </AnimatePresence>
 
-        {/* Music Button */}
+        {/* Music Button - Moved to bottom-4 left-4 */}
         <div className="fixed bottom-4 left-4 z-50">
             <button 
                 type="button"

@@ -8,7 +8,6 @@ import { Preview } from './components/Preview';
 import { Pricing } from './components/Pricing';
 import { FloatingPetals } from './components/FloatingPetals';
 import { GuestManager } from './components/GuestManager';
-import { TemplateRedGold } from './components/TemplateRedGold';
 import { TemplatePersonalized } from './components/TemplatePersonalized';
 import { AdminDashboard } from './components/AdminDashboard';
 import { LinkGeneratorModal } from './components/LinkGeneratorModal';
@@ -677,9 +676,7 @@ function App() {
                (() => {
                    const tpl = TEMPLATES.find(t => t.style === viewingInvitation.data.style) || TEMPLATES[0];
                    
-                   if (tpl.style === 'red-gold') {
-                        return <TemplateRedGold data={viewingInvitation.data} readonly={true} invitationId={viewingInvitation.id} guestName={guestNameFromUrl} />
-                   } else if (tpl.style === 'personalized') {
+                   if (tpl.style === 'personalized' || viewingInvitation.data.style === 'personalized') {
                         return <TemplatePersonalized data={viewingInvitation.data} readonly={true} invitationId={viewingInvitation.id} guestName={guestNameFromUrl} />
                    }
                    

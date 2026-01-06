@@ -4,7 +4,6 @@ import { motion } from 'framer-motion';
 import { InvitationData, Template } from '../types';
 import { MapPin, Calendar, Clock, Heart, ArrowLeft, Lock } from 'lucide-react';
 import { Button } from './Button';
-import { TemplateRedGold } from './TemplateRedGold';
 import { TemplatePersonalized } from './TemplatePersonalized';
 
 interface PreviewProps {
@@ -18,17 +17,10 @@ interface PreviewProps {
 
 export const Preview: React.FC<PreviewProps> = ({ data, template, onBack, onSave, onAutosave, readonly = false }) => {
   
-  // Logic render cho mẫu Red Gold và Personalized
-  if (template.style === 'red-gold' || template.style === 'personalized') {
+  // Logic render cho mẫu Personalized
+  if (template.style === 'personalized') {
      return (
         <div className="min-h-screen bg-gray-100/50 flex flex-col items-center justify-start py-0 relative overflow-x-hidden">
-           
-           {/* Mobile Buttons Controls */}
-           <div className="fixed bottom-4 left-4 md:left-20 z-[60] flex flex-col gap-2">
-                <Button variant="secondary" onClick={onBack} className="shadow-xl rounded-full w-12 h-12 p-0 flex items-center justify-center" title="Quay lại">
-                    <ArrowLeft className="w-6 h-6" />
-                </Button>
-           </div>
            
            {/* Chỉ hiện cảnh báo này nếu đang ở chế độ readonly (User thường) */}
            {readonly && (
@@ -38,36 +30,25 @@ export const Preview: React.FC<PreviewProps> = ({ data, template, onBack, onSave
                </div>
            )}
            
-           {/* Đã bỏ wrapper max-w-420px vì Template tự handle scale */}
            <div className="w-full relative">
                <div className="fixed top-0 left-0 w-full bg-black/50 text-white text-center py-1 z-50 text-xs md:hidden">
                    {readonly ? "Vuốt để xem thiệp mẫu" : "Vuốt để xem • Nhấn bút chì góc phải để sửa"}
                </div>
                
-               {template.style === 'red-gold' ? (
-                   <TemplateRedGold 
-                        data={data} 
-                        onSave={onSave} 
-                        onAutosave={onAutosave} // Pass autosave
-                        readonly={readonly} 
-                   />
-               ) : (
-                   <TemplatePersonalized 
-                        data={data} 
-                        onSave={onSave} 
-                        onAutosave={onAutosave} // Pass autosave
-                        readonly={readonly} 
-                   />
-               )}
+               <TemplatePersonalized 
+                    data={data} 
+                    onSave={onSave} 
+                    onAutosave={onAutosave} 
+                    readonly={readonly} 
+               />
            </div>
         </div>
      );
   }
 
-  // (Phần code cũ cho các mẫu khác - giữ nguyên logic hiển thị)
+  // Fallback cho các mẫu cũ nếu còn tồn tại trong data cũ
   const getStyleClasses = () => {
     switch(template.style) {
-        case 'luxury': return 'border-4 border-double border-amber-300 bg-gradient-to-br from-slate-50 to-amber-50 text-amber-900';
         case 'floral': return 'border-8 border-rose-100 bg-white text-emerald-900';
         case 'modern': return 'border-2 border-slate-800 bg-white text-slate-900';
         default: return 'border-8 border-white shadow-2xl bg-rose-50 text-rose-900';
@@ -76,7 +57,6 @@ export const Preview: React.FC<PreviewProps> = ({ data, template, onBack, onSave
 
   const getAccentColor = () => {
     switch(template.style) {
-        case 'luxury': return 'text-amber-500';
         case 'floral': return 'text-rose-400';
         case 'modern': return 'text-slate-500';
         default: return 'text-rose-500';
@@ -117,7 +97,7 @@ export const Preview: React.FC<PreviewProps> = ({ data, template, onBack, onSave
                 <p className="italic font-serif opacity-80 mb-6 text-lg leading-relaxed px-4">
                     "{data.message}"
                 </p>
-                <div className={`w-16 h-1 mx-auto rounded-full ${template.style === 'luxury' ? 'bg-amber-300' : 'bg-rose-300'}`}></div>
+                <div className="w-16 h-1 mx-auto rounded-full bg-rose-300"></div>
             </div>
 
             <div className="grid grid-cols-1 gap-4 text-sm font-semibold uppercase tracking-wider">
