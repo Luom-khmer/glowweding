@@ -146,6 +146,12 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
   const handleMusicChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (file) {
+          // KIỂM TRA DUNG LƯỢNG FILE: Giới hạn 800KB để an toàn cho Firestore (Max 1MB document)
+          if (file.size > 800 * 1024) {
+              alert("⚠️ File nhạc quá lớn!\nFirestore giới hạn lưu trữ 1MB/thiệp.\nVui lòng chọn file nhạc < 800KB hoặc cắt ngắn file mp3.");
+              return;
+          }
+
           const reader = new FileReader();
           reader.onloadend = () => {
               const result = reader.result as string;
@@ -892,4 +898,3 @@ export const TemplateRedGold: React.FC<TemplateRedGoldProps> = ({ data: initialD
     </div>
   );
 };
-    

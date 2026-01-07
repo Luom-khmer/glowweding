@@ -130,6 +130,12 @@ export const TemplatePersonalized: React.FC<TemplatePersonalizedProps> = ({ data
   const handleMusicChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (file) {
+          // KIỂM TRA DUNG LƯỢNG FILE: Giới hạn 800KB để an toàn cho Firestore (Max 1MB document)
+          if (file.size > 800 * 1024) {
+              alert("⚠️ File nhạc quá lớn!\nFirestore giới hạn lưu trữ 1MB/thiệp.\nVui lòng chọn file nhạc < 800KB hoặc cắt ngắn file mp3.");
+              return;
+          }
+
           const reader = new FileReader();
           reader.onloadend = () => {
               const result = reader.result as string;
@@ -882,7 +888,7 @@ export const TemplatePersonalized: React.FC<TemplatePersonalizedProps> = ({ data
                 </button>
             </motion.div>
             
-            <div className="abs pointer-events-none bg-cover" style={{top:0, left:'-566px', width:'350px', height:'667px', backgroundImage:'url("https://statics.pancake.vn/web-media/fd/42/7d/0c/1ca1e8525f99e3105eb930cd8ed684a64b07a0d9df7e0c725ca9779c-w:1260-h:2400-l:65030-t:image/png.png")'}}></motion.div>
+            <div className="abs pointer-events-none bg-cover" style={{top:0, left:'-566px', width:'350px', height:'667px', backgroundImage:'url("https://statics.pancake.vn/web-media/fd/42/7d/0c/1ca1e8525f99e3105eb930cd8ed684a64b07a0d9df7e0c725ca9779c-w:1260-h:2400-l:65030-t:image/png.png")'}}></div >
         </div>
 
         {/* --- SECTION 6: ALBUM 1 --- */}

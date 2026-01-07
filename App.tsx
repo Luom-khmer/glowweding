@@ -83,32 +83,25 @@ const mergeWithDefaults = (data: InvitationData): InvitationData => {
 
 // Helper để làm sạch dữ liệu trước khi lưu vào Firebase
 const sanitizeData = (data: InvitationData): InvitationData => {
-    // Tạo bản sao shallow để không ảnh hưởng state gốc
-    const clean = { ...data };
+    try {
+        // 1. Dùng JSON parse/stringify để loại bỏ hoàn toàn các trường undefined
+        // Đây là cách an toàn nhất để tránh lỗi "invalid nested entity" của Firestore
+        const clean = JSON.parse(JSON.stringify(data));
 
-    // Đảm bảo các mảng ảnh không chứa null hoặc empty slots (biến thành chuỗi rỗng)
-    // Firestore array không hỗ trợ undefined
-    if (Array.isArray(clean.albumImages)) {
-        clean.albumImages = clean.albumImages.map((item: any) => item || "");
-    } else {
-        clean.albumImages = [];
+        // 2. Đảm bảo các mảng ảnh không chứa null (JSON.stringify biến undefined thành null trong mảng)
+        if (Array.isArray(clean.albumImages)) {
+            clean.albumImages = clean.albumImages.map((item: any) => item || "");
+        }
+        if (Array.isArray(clean.galleryImages)) {
+            clean.galleryImages = clean.galleryImages.map((item: any) => item || "");
+        }
+        
+        return clean;
+    } catch (e) {
+        console.error("Sanitize Data Error:", e);
+        // Fallback thủ công nếu JSON fail (ví dụ do circular ref, dù không nên có)
+        return { ...data };
     }
-
-    if (Array.isArray(clean.galleryImages)) {
-        clean.galleryImages = clean.galleryImages.map((item: any) => item || "");
-    } else {
-        clean.galleryImages = [];
-    }
-
-    // Sao chép styles để đảm bảo không bị tham chiếu (deep copy level 1)
-    if (clean.elementStyles) {
-        clean.elementStyles = { ...clean.elementStyles };
-    }
-    
-    // Lưu ý: Các trường undefined trong object sẽ được Firestore tự động bỏ qua 
-    // nhờ cấu hình ignoreUndefinedProperties: true trong firebase.ts
-    
-    return clean;
 };
 
 function App() {
@@ -290,7 +283,7 @@ function App() {
         loadInvitations(); 
     } catch (e: any) {
         console.error("Save Error:", e);
-        alert("Lỗi khi lưu thiệp: " + e.message);
+        alert("Lỗi khi lưu thiệp: " + e.message + "\n\n(Lưu ý: Nếu bạn vừa tải nhạc, hãy đảm bảo file nhạc < 1MB)");
     } finally {
         setIsSaving(false);
     }
