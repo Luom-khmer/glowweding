@@ -44,7 +44,9 @@ export interface InvitationData {
   brideAddress?: string;
 
   // Tiêu đề tùy chỉnh
-  invitedTitle?: string; // Thay thế cho "Trân Trọng Kính Mời"
+  invitedTitle?: string; // Thay thế cho "Trân Trọng Kính Mời" (Section 1)
+  ceremonyTitle?: string; // Thay thế cho "Trân Trọng Báo Tin Lễ Thành Hôn Của" (Section 2)
+  partyTitle?: string;    // Thay thế cho "THAM DỰ TIỆC MỪNG LỄ THÀNH HÔN" (Section 3)
   albumTitle?: string;   // Thay thế cho "Album Hình Cưới"
 
   // Cấu hình style riêng cho từng element (VD: Font size)

@@ -632,7 +632,9 @@ export const TemplatePersonalized: React.FC<TemplatePersonalizedProps> = ({ data
              <div className="abs bg-cover" style={{top:'65px', left:'176px', width:'68px', height:'68px', backgroundImage: 'url("https://statics.pancake.vn/web-media/b3/56/e9/68/af4129e31d91132cb5316f8ce714f78a520be70fd480db42ff8122ce-w:500-h:500-l:43453-t:image/png.png")'}}></div>
 
              <motion.div variants={fadeInUp} initial="hidden" whileInView="visible" viewport={{once:true}} className="abs" style={{top:'243.5px', left:'58px', width:'304px'}}>
-                <h2 style={{fontFamily:'BlackMango-Medium, sans-serif', fontSize:'14px', textAlign:'center'}}>Trân Trọng Báo Tin Lễ Thành Hôn Của</h2>
+                <EditableWrapper field="ceremonyTitle" label="Tiêu đề Lễ" defaultFontSize={14} className="w-full text-center">
+                    <h2 style={{fontFamily:'BlackMango-Medium, sans-serif', fontSize:'14px', textAlign:'center'}}>{localData.ceremonyTitle}</h2>
+                </EditableWrapper>
              </motion.div>
 
              <motion.div variants={zoomIn} initial="hidden" whileInView="visible" viewport={{once:true}} className="abs" style={{top:'273.5px', left:'3.5px', width:'413px'}}>
@@ -693,8 +695,15 @@ export const TemplatePersonalized: React.FC<TemplatePersonalizedProps> = ({ data
                  <EditableWrapper field="galleryImages-2" isText={false} aspect={116/165} className="w-full h-full border-[3px] border-white shadow-md"><CinematicImage src={getGalleryImg(2)} enableKenBurns={true} /></EditableWrapper>
             </motion.div>
 
-            <motion.div variants={fadeIn} initial="hidden" whileInView="visible" viewport={{once:true}} className="abs w-full text-center" style={{top:'310px', left:'0', width:'420px'}}>
-                <p style={{fontSize:'15px', fontFamily:'Arial, sans-serif', letterSpacing:'1px', lineHeight:'1.5', textTransform:'uppercase', color:'#000'}}>THAM DỰ TIỆC MỪNG LỄ THÀNH HÔN<br/><span style={{textTransform:'none'}}>Vào Lúc</span></p>
+            <motion.div variants={fadeIn} initial="hidden" whileInView="visible" viewport={{once:true}} className="abs w-full flex flex-col items-center justify-center" style={{top:'310px', left:'0', width:'420px', height: '60px'}}>
+                <EditableWrapper field="partyTitle" label="Tiêu đề Tiệc" defaultFontSize={15} className="text-center w-full">
+                    <p style={{fontSize:'15px', fontFamily:'Arial, sans-serif', letterSpacing:'1px', textTransform:'uppercase', color:'#000', lineHeight:'1.5'}}>
+                        {localData.partyTitle}
+                    </p>
+                </EditableWrapper>
+                <p style={{fontSize:'15px', fontFamily:'Arial, sans-serif', letterSpacing:'1px', lineHeight:'1.5', color:'#000'}}>
+                    Vào Lúc
+                </p>
             </motion.div>
 
             {/* Calendar Grid - Adjusted Layout */}

@@ -54,6 +54,8 @@ const initialData: InvitationData = {
   lunarDate: '(Tức Ngày 18 Tháng 01 Năm Ất Tỵ)',
   groomAddress: 'Quận 8, TP. Hồ Chí Minh',
   brideAddress: 'Quận 8, TP. Hồ Chí Minh',
+  ceremonyTitle: 'Trân Trọng Báo Tin Lễ Thành Hôn Của',
+  partyTitle: 'THAM DỰ TIỆC MỪNG LỄ THÀNH HÔN',
   elementStyles: {}
 };
 
@@ -77,7 +79,9 @@ const mergeWithDefaults = (data: InvitationData): InvitationData => {
         bankInfo: data.bankInfo || initialData.bankInfo,
         qrCodeUrl: data.qrCodeUrl || initialData.qrCodeUrl,
         musicUrl: data.musicUrl || initialData.musicUrl,
-        style: data.style || initialData.style
+        style: data.style || initialData.style,
+        ceremonyTitle: data.ceremonyTitle || initialData.ceremonyTitle,
+        partyTitle: data.partyTitle || initialData.partyTitle
     };
 };
 
