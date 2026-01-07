@@ -1,7 +1,7 @@
 
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { initializeFirestore } from "firebase/firestore";
 
 // --- CẤU HÌNH CỦA BẠN ---
 const firebaseConfig = {
@@ -18,4 +18,9 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
-export const db = getFirestore(app);
+
+// Khởi tạo Firestore với tùy chọn bỏ qua các thuộc tính undefined
+// Điều này giúp tránh lỗi "Invalid nested entity" khi lưu dữ liệu có trường không xác định
+export const db = initializeFirestore(app, {
+    ignoreUndefinedProperties: true
+});

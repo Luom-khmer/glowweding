@@ -81,35 +81,32 @@ const mergeWithDefaults = (data: InvitationData): InvitationData => {
     };
 };
 
-// Helper để làm sạch dữ liệu trước khi lưu vào Firebase (Fix lỗi "invalid nested entity")
+// Helper để làm sạch dữ liệu trước khi lưu vào Firebase
 const sanitizeData = (data: InvitationData): InvitationData => {
-    // 1. Loại bỏ hoàn toàn các giá trị undefined bằng cách serialize/deserialize JSON
-    // Firebase không chấp nhận giá trị undefined, nhưng chấp nhận null hoặc missing key.
-    // JSON.stringify sẽ tự động bỏ qua các key có giá trị undefined.
-    let clean = JSON.parse(JSON.stringify(data));
+    // Tạo bản sao shallow để không ảnh hưởng state gốc
+    const clean = { ...data };
 
-    // 2. Đảm bảo các mảng ảnh không chứa null hoặc empty slots (biến thành chuỗi rỗng)
-    if (clean.albumImages) {
-        clean.albumImages = Array.isArray(clean.albumImages) 
-            ? clean.albumImages.map((item: any) => item || "")
-            : [];
-    }
-    if (clean.galleryImages) {
-        clean.galleryImages = Array.isArray(clean.galleryImages)
-            ? clean.galleryImages.map((item: any) => item || "")
-            : [];
+    // Đảm bảo các mảng ảnh không chứa null hoặc empty slots (biến thành chuỗi rỗng)
+    // Firestore array không hỗ trợ undefined
+    if (Array.isArray(clean.albumImages)) {
+        clean.albumImages = clean.albumImages.map((item: any) => item || "");
+    } else {
+        clean.albumImages = [];
     }
 
-    // 3. Đảm bảo elementStyles là object hợp lệ
+    if (Array.isArray(clean.galleryImages)) {
+        clean.galleryImages = clean.galleryImages.map((item: any) => item || "");
+    } else {
+        clean.galleryImages = [];
+    }
+
+    // Sao chép styles để đảm bảo không bị tham chiếu (deep copy level 1)
     if (clean.elementStyles) {
-        const cleanStyles: any = {};
-        Object.keys(clean.elementStyles).forEach(key => {
-            if (clean.elementStyles[key]) {
-                cleanStyles[key] = { ...clean.elementStyles[key] };
-            }
-        });
-        clean.elementStyles = cleanStyles;
+        clean.elementStyles = { ...clean.elementStyles };
     }
+    
+    // Lưu ý: Các trường undefined trong object sẽ được Firestore tự động bỏ qua 
+    // nhờ cấu hình ignoreUndefinedProperties: true trong firebase.ts
     
     return clean;
 };
