@@ -1,9 +1,10 @@
 
-import React from 'react';
-import { motion } from 'framer-motion';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { SavedInvitation } from '../types';
-import { Copy, Trash2, ExternalLink, FolderOpen, Eye, Pencil, FileSpreadsheet, Wrench } from 'lucide-react';
+import { Copy, Trash2, ExternalLink, FolderOpen, Eye, Pencil, FileSpreadsheet, Wrench, ChevronDown, ChevronUp, Code, Link as LinkIcon, Check, X, Table } from 'lucide-react';
 import { Button } from './Button';
+import { invitationService } from '../services/invitationService';
 
 interface GuestManagerProps {
   invitations: SavedInvitation[];
@@ -13,16 +14,88 @@ interface GuestManagerProps {
   onEdit: (invitation: SavedInvitation) => void;
 }
 
+const APPS_SCRIPT_CODE = `function doPost(e) {
+  var lock = LockService.getScriptLock();
+  lock.tryLock(10000);
+
+  try {
+    var doc = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = doc.getActiveSheet();
+
+    var nextRow = sheet.getLastRow() + 1;
+
+    var data = JSON.parse(e.postData.contents);
+
+    // Thứ tự lưu: Thời gian, Tên, Quan hệ, Tham dự, Lời chúc
+    var newRow = [
+      data.submittedAt || new Date(),
+      data.guestName,
+      data.guestRelation,
+      data.attendance,
+      data.guestWishes
+    ];
+
+    sheet.getRange(nextRow, 1, 1, newRow.length).setValues([newRow]);
+
+    return ContentService
+      .createTextOutput(JSON.stringify({ 'result': 'success', 'row': nextRow }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  catch (e) {
+    return ContentService
+      .createTextOutput(JSON.stringify({ 'result': 'error', 'error': e }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  finally {
+    lock.releaseLock();
+  }
+}`;
+
 export const GuestManager: React.FC<GuestManagerProps> = ({ invitations, onDelete, onCreateNew, onView, onEdit }) => {
+  const [showScript, setShowScript] = useState(false);
+  const [editingSheetId, setEditingSheetId] = useState<string | null>(null);
+  const [sheetUrlInput, setSheetUrlInput] = useState(''); // Script URL
+  const [sheetViewUrlInput, setSheetViewUrlInput] = useState(''); // View URL (Docs)
+  const [isSavingSheet, setIsSavingSheet] = useState(false);
+
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    alert('Đã sao chép: ' + text);
+    alert('Đã sao chép!');
   };
 
   const copyToolLink = (invId: string) => {
-      // Tạo link tool riêng: domain/?mode=tool&invitationId=...
       const toolLink = `${window.location.origin}?mode=tool&invitationId=${invId}`;
       copyToClipboard(toolLink);
+  };
+
+  const openSheetConfig = (inv: SavedInvitation) => {
+      setEditingSheetId(inv.id);
+      setSheetUrlInput(inv.data.googleSheetUrl || '');
+      setSheetViewUrlInput(inv.data.sheetViewUrl || '');
+  };
+
+  const saveSheetConfig = async (inv: SavedInvitation) => {
+      setIsSavingSheet(true);
+      try {
+          const newData = { 
+              ...inv.data, 
+              googleSheetUrl: sheetUrlInput,
+              sheetViewUrl: sheetViewUrlInput
+          };
+          await invitationService.updateInvitation(inv.id, inv.customerName, newData);
+          
+          // Cập nhật UI tạm thời
+          inv.data.googleSheetUrl = sheetUrlInput; 
+          inv.data.sheetViewUrl = sheetViewUrlInput;
+          setEditingSheetId(null);
+          alert("Đã lưu cấu hình Google Sheet thành công!");
+      } catch (e) {
+          alert("Lỗi lưu cấu hình.");
+      } finally {
+          setIsSavingSheet(false);
+      }
   };
 
   return (
@@ -36,14 +109,51 @@ export const GuestManager: React.FC<GuestManagerProps> = ({ invitations, onDelet
       </div>
       
       {/* Thông báo hướng dẫn Google Sheet */}
-      <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 mb-6 flex items-start gap-3">
-         <FileSpreadsheet className="w-6 h-6 text-green-600 mt-1 flex-shrink-0" />
-         <div>
-            <h4 className="font-bold text-blue-800 text-sm">Quản lý RSVP bằng Google Sheets?</h4>
-            <p className="text-sm text-blue-700">
-                Để khách hàng nhận được danh sách người tham dự vào Google Sheet của họ: 
-                Hãy dán link <strong>Google Apps Script Webhook</strong> vào phần cài đặt trong lúc chỉnh sửa thiệp.
-            </p>
+      <div className="bg-blue-50 border border-blue-100 rounded-lg p-5 mb-8 shadow-sm">
+         <div className="flex items-start gap-3">
+             <FileSpreadsheet className="w-8 h-8 text-green-600 mt-1 flex-shrink-0" />
+             <div className="flex-1">
+                <h4 className="font-bold text-blue-800 text-base mb-2">Quy trình kết nối Google Sheets (Làm cho mỗi khách mới):</h4>
+                <ol className="text-sm text-blue-700 list-decimal ml-4 space-y-2 mb-4">
+                    <li>Tạo 1 file <strong>Google Sheet mới</strong> cho khách hàng này.</li>
+                    <li>Vào menu <strong>Tiện ích mở rộng (Extensions)</strong> &rarr; <strong>Apps Script</strong>.</li>
+                    <li>
+                        Copy đoạn mã bên dưới và dán đè vào trình soạn thảo code.
+                        <button 
+                            onClick={() => setShowScript(!showScript)}
+                            className="ml-2 inline-flex items-center text-xs bg-white border border-blue-200 px-2 py-1 rounded text-blue-600 font-bold hover:bg-blue-50"
+                        >
+                            <Code className="w-3 h-3 mr-1" /> {showScript ? 'Ẩn Mã' : 'Xem & Copy Mã'} {showScript ? <ChevronUp className="w-3 h-3 ml-1"/> : <ChevronDown className="w-3 h-3 ml-1"/>}
+                        </button>
+                    </li>
+                    <AnimatePresence>
+                        {showScript && (
+                            <motion.div 
+                                initial={{ height: 0, opacity: 0 }} 
+                                animate={{ height: 'auto', opacity: 1 }} 
+                                exit={{ height: 0, opacity: 0 }}
+                                className="overflow-hidden"
+                            >
+                                <div className="relative mt-2 mb-2">
+                                    <pre className="bg-slate-800 text-slate-100 p-4 rounded-md text-xs font-mono overflow-x-auto border border-slate-700">
+                                        {APPS_SCRIPT_CODE}
+                                    </pre>
+                                    <button 
+                                        onClick={() => copyToClipboard(APPS_SCRIPT_CODE)}
+                                        className="absolute top-2 right-2 bg-white/10 hover:bg-white/20 text-white px-2 py-1 rounded text-xs flex items-center gap-1 backdrop-blur-sm"
+                                    >
+                                        <Copy className="w-3 h-3" /> Copy
+                                    </button>
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                    <li>Bấm <strong>Triển khai (Deploy)</strong> &rarr; <strong>Tùy chọn triển khai mới</strong>.</li>
+                    <li>Chọn loại: <strong>Ứng dụng Web</strong>. Quyền truy cập: <strong>Bất kỳ ai (Anyone)</strong>.</li>
+                    <li>Bấm Triển khai và <strong>Copy URL ứng dụng web</strong> (kết thúc bằng <code>/exec</code>).</li>
+                    <li>Quay lại đây, bấm nút <strong>Kết nối Sheet</strong> (icon Excel xanh lá) ở danh sách bên dưới &rarr; Dán link vào.</li>
+                </ol>
+             </div>
          </div>
       </div>
 
@@ -71,61 +181,140 @@ export const GuestManager: React.FC<GuestManagerProps> = ({ invitations, onDelet
                         <div className="text-sm text-gray-600 mb-2 truncate">
                              Dâu rể: {inv.data.groomName} & {inv.data.brideName}
                         </div>
-                        <div className="flex items-center gap-2 text-sm text-gray-500 bg-gray-50 p-2 rounded border border-gray-200 w-full md:w-fit max-w-full">
-                             <ExternalLink className="w-3 h-3 flex-shrink-0" />
-                             <a href={inv.link} target="_blank" rel="noopener noreferrer" className="truncate hover:text-rose-600 hover:underline">
-                                {inv.link}
-                             </a>
+                        
+                        {/* Status Bar */}
+                        <div className="flex flex-wrap gap-2 text-xs">
+                             <div className="flex items-center gap-1 bg-gray-50 px-2 py-1 rounded border border-gray-200 text-gray-500 max-w-[200px]">
+                                 <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                                 <a href={inv.link} target="_blank" rel="noopener noreferrer" className="truncate hover:text-rose-600 hover:underline">
+                                    Xem Thiệp
+                                 </a>
+                             </div>
+                             
+                             {/* Sheet Connection Status */}
+                             <div 
+                                className={`flex items-center gap-1 px-2 py-1 rounded border cursor-pointer transition-colors ${inv.data.googleSheetUrl ? 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100' : 'bg-gray-50 border-gray-200 text-gray-400 hover:bg-gray-100'}`}
+                                onClick={() => openSheetConfig(inv)}
+                                title={inv.data.googleSheetUrl ? "Đã kết nối Sheet. Bấm để sửa." : "Chưa kết nối Sheet. Bấm để thêm."}
+                             >
+                                 <FileSpreadsheet className="w-3 h-3" />
+                                 {inv.data.googleSheetUrl ? 'Đã nối Sheet' : 'Chưa nối Sheet'}
+                             </div>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2 w-full md:w-auto flex-wrap justify-end">
-                         {/* Nút gửi tool cho khách */}
+                    {/* ACTIONS */}
+                    <div className="flex items-center gap-2 w-full md:w-auto flex-wrap justify-end mt-2 md:mt-0">
+                         {/* Nếu đã có Link Sheet View thì hiện nút Copy gửi khách */}
+                         {inv.data.sheetViewUrl && (
+                             <button
+                                onClick={() => copyToClipboard(inv.data.sheetViewUrl!)}
+                                className="flex items-center justify-center gap-2 px-3 py-2 bg-green-100 text-green-800 rounded-lg hover:bg-green-200 font-medium transition"
+                                title="Copy link Google Sheet gửi cho Cô Dâu Chú Rể"
+                            >
+                                <Table className="w-4 h-4" /> <span className="hidden lg:inline text-xs font-bold">Copy Link Báo Cáo</span>
+                            </button>
+                         )}
+
                          <button
                             onClick={() => copyToolLink(inv.id)}
                             className="flex items-center justify-center gap-2 px-3 py-2 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 font-medium transition"
-                            title="Copy link Tool tạo tên khách (Gửi cho Dâu Rể)"
+                            title="Lấy Link gửi cho khách"
                         >
-                            <Wrench className="w-4 h-4" /> <span className="hidden lg:inline text-xs">Link Tool</span>
+                            <LinkIcon className="w-4 h-4" /> <span className="hidden lg:inline text-xs font-bold">Lấy Link Mời</span>
                         </button>
 
                         <div className="w-px h-6 bg-gray-300 mx-1 hidden md:block"></div>
 
                         <button
                             onClick={() => onEdit(inv)}
-                            className="flex items-center justify-center gap-2 px-3 py-2 bg-amber-50 text-amber-700 rounded-lg hover:bg-amber-100 font-medium transition"
-                            title="Chỉnh sửa"
+                            className="p-2 bg-amber-50 text-amber-700 rounded-lg hover:bg-amber-100 transition"
+                            title="Sửa nội dung thiệp"
                         >
                             <Pencil className="w-4 h-4" />
-                        </button>
-                        <button
-                            onClick={() => onView(inv)}
-                            className="flex items-center justify-center gap-2 px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 font-medium transition"
-                            title="Xem như khách mời"
-                        >
-                            <Eye className="w-4 h-4" />
-                        </button>
-                        <button 
-                            onClick={() => copyToClipboard(inv.link)}
-                            className="flex items-center justify-center gap-2 px-3 py-2 bg-rose-50 text-rose-600 rounded-lg hover:bg-rose-100 font-medium transition"
-                            title="Copy link thiệp gốc"
-                        >
-                            <Copy className="w-4 h-4" />
                         </button>
                         <button 
                             onClick={() => {
                                 if(window.confirm('Bạn có chắc muốn xóa đơn hàng này không? Hành động này không thể hoàn tác.')) onDelete(inv.id);
                             }}
-                            className="px-3 py-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition"
+                            className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition"
                             title="Xóa đơn hàng"
                         >
-                            <Trash2 className="w-5 h-5" />
+                            <Trash2 className="w-4 h-4" />
                         </button>
                     </div>
                 </motion.div>
             ))}
         </div>
       )}
+
+      {/* MODAL CẤU HÌNH SHEET */}
+      <AnimatePresence>
+          {editingSheetId && (
+              <motion.div 
+                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                  className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm"
+                  onClick={() => setEditingSheetId(null)}
+              >
+                  <motion.div 
+                      initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }}
+                      className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-lg"
+                      onClick={e => e.stopPropagation()}
+                  >
+                      <div className="flex justify-between items-center mb-4 border-b pb-3">
+                          <div className="flex items-center gap-2">
+                              <div className="bg-green-100 p-2 rounded-lg"><FileSpreadsheet className="w-6 h-6 text-green-700" /></div>
+                              <h3 className="font-bold text-lg text-gray-900">Kết Nối Google Sheet</h3>
+                          </div>
+                          <button onClick={() => setEditingSheetId(null)} className="text-gray-400 hover:text-gray-600"><X /></button>
+                      </div>
+                      
+                      <div className="space-y-4">
+                          {/* INPUT 1: Script URL */}
+                          <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">1. Link Apps Script (Để chạy dữ liệu)</label>
+                              <p className="text-xs text-gray-500 mb-2">Link kết thúc bằng <code>/exec</code>. (Làm theo hướng dẫn ở trên)</p>
+                              <input 
+                                  type="text" 
+                                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none font-mono text-sm"
+                                  placeholder="https://script.google.com/macros/s/.../exec"
+                                  value={sheetUrlInput}
+                                  onChange={(e) => setSheetUrlInput(e.target.value)}
+                                  autoFocus
+                              />
+                          </div>
+
+                          {/* INPUT 2: Sheet View URL */}
+                          <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">2. Link File Sheet Gốc (Để gửi khách xem)</label>
+                              <p className="text-xs text-gray-500 mb-2">Copy link trên thanh địa chỉ trình duyệt khi đang mở file Excel.</p>
+                              <input 
+                                  type="text" 
+                                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none font-mono text-sm"
+                                  placeholder="https://docs.google.com/spreadsheets/d/..."
+                                  value={sheetViewUrlInput}
+                                  onChange={(e) => setSheetViewUrlInput(e.target.value)}
+                              />
+                          </div>
+                      </div>
+
+                      <div className="flex justify-end gap-3 pt-6">
+                          <Button variant="ghost" onClick={() => setEditingSheetId(null)}>Hủy</Button>
+                          <button 
+                              onClick={() => {
+                                  const targetInv = invitations.find(i => i.id === editingSheetId);
+                                  if (targetInv) saveSheetConfig(targetInv);
+                              }}
+                              disabled={isSavingSheet}
+                              className="bg-green-600 text-white px-4 py-2 rounded-full font-medium hover:bg-green-700 flex items-center gap-2 shadow-lg shadow-green-200"
+                          >
+                              {isSavingSheet ? "Đang lưu..." : <><Check className="w-4 h-4" /> Lưu Kết Nối</>}
+                          </button>
+                      </div>
+                  </motion.div>
+              </motion.div>
+          )}
+      </AnimatePresence>
     </div>
   );
 };

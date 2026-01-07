@@ -37,6 +37,7 @@ const initialData: InvitationData = {
   bankInfo: 'MBBANK - NGUYEN TAN DAT\n8838683860',
   musicUrl: 'https://statics.pancake.vn/web-media/5e/ee/bf/4a/afa10d3bdf98ca17ec3191ebbfd3c829d135d06939ee1f1b712d731d-w:0-h:0-l:2938934-t:audio/mpeg.mp3',
   googleSheetUrl: '',
+  sheetViewUrl: '',
   centerImage: 'https://statics.pancake.vn/web-media/e2/8c/c5/37/905dccbcd5bc1c1b602c10c95acb9986765f735e075bff1097e7f457-w:736-h:981-l:47868-t:image/jpeg.jfif',
   footerImage: 'https://statics.pancake.vn/web-media/ad/c0/11/16/06080e040619cef49e87d7e06a574eb61310d3dc4bdc9f0fec3638c9-w:854-h:1280-l:259362-t:image/jpeg.png',
   albumImages: [
@@ -81,7 +82,9 @@ const mergeWithDefaults = (data: InvitationData): InvitationData => {
         musicUrl: data.musicUrl || initialData.musicUrl,
         style: data.style || initialData.style,
         ceremonyTitle: data.ceremonyTitle || initialData.ceremonyTitle,
-        partyTitle: data.partyTitle || initialData.partyTitle
+        partyTitle: data.partyTitle || initialData.partyTitle,
+        googleSheetUrl: data.googleSheetUrl || initialData.googleSheetUrl,
+        sheetViewUrl: data.sheetViewUrl || initialData.sheetViewUrl
     };
 };
 

@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useRef } from 'react';
 import { InvitationData } from '../types';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -541,7 +542,7 @@ export const TemplatePersonalized: React.FC<TemplatePersonalizedProps> = ({ data
                         {(editingField.key !== 'mapUrl' && editingField.key !== 'googleSheetUrl') && <input type="range" min="10" max="80" value={editingField.fontSize || 14} onChange={(e) => setEditingField({ ...editingField, fontSize: parseInt(e.target.value) })} className="w-full h-2 bg-gray-200 rounded-lg accent-rose-600" />}
                         {editingField.key === 'date' ? <input type="date" className="w-full p-2 border rounded" value={editingField.value} onChange={(e) => setEditingField({ ...editingField, value: e.target.value })} /> : 
                          editingField.key === 'time' ? <input type="time" className="w-full p-2 border rounded" value={editingField.value} onChange={(e) => setEditingField({ ...editingField, value: e.target.value })} /> :
-                         (editingField.key === 'mapUrl' || editingField.key === 'googleSheetUrl') ? <input type="text" placeholder={editingField.key === 'googleSheetUrl' ? "Dán link Google Apps Script vào đây..." : "Dán link Google Maps vào đây..."} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 outline-none" value={editingField.value} onChange={(e) => setEditingField({ ...editingField, value: e.target.value })} /> :
+                         (editingField.key === 'mapUrl' || editingField.key === 'googleSheetUrl') ? <input type="text" placeholder={editingField.key === 'googleSheetUrl' ? "Dán Link Webhook Google Sheet (Của khách này) vào đây..." : "Dán link Google Maps vào đây..."} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 outline-none" value={editingField.value} onChange={(e) => setEditingField({ ...editingField, value: e.target.value })} /> :
                          <textarea rows={4} className="w-full p-2 border rounded" value={editingField.value} onChange={(e) => setEditingField({ ...editingField, value: e.target.value })} />}
                     </div>
                     <div className="flex justify-end gap-3"><Button variant="ghost" onClick={() => setEditingField(null)}>Hủy</Button><Button onClick={saveTextChange}>Lưu</Button></div>

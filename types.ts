@@ -27,8 +27,11 @@ export interface InvitationData {
   bankInfo?: string;     // Thông tin số tài khoản
   musicUrl?: string;     // Link nhạc nền (mp3)
   
-  // Link Google Sheet Webhook riêng cho từng thiệp
+  // Link Google Sheet Webhook riêng cho từng thiệp (Dùng để Gửi dữ liệu)
   googleSheetUrl?: string; 
+  
+  // Link Google Sheet Gốc (Dùng để gửi cho khách xem báo cáo)
+  sheetViewUrl?: string;
 
   // Các ảnh mới
   centerImage?: string;  // Ảnh ở giữa phần thông tin cha mẹ
