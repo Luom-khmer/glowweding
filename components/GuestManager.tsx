@@ -14,28 +14,32 @@ interface GuestManagerProps {
   onEdit: (invitation: SavedInvitation) => void;
 }
 
-// CẬP NHẬT SCRIPT GOOGLE: Thêm đoạn xử lý 'checkConnection' để trả về Link Sheet
-const APPS_SCRIPT_CODE = `function doPost(e) {
+// CẬP NHẬT SCRIPT GOOGLE: Thêm hàm doGet để xử lý việc lấy Link (ổn định hơn POST)
+const APPS_SCRIPT_CODE = `// 1. Hàm xử lý khi Web hỏi lấy Link (Method GET)
+function doGet(e) {
+  // Trả về JSON cho Web
+  if (e.parameter.checkConnection) {
+    var doc = SpreadsheetApp.getActiveSpreadsheet();
+    return ContentService
+      .createTextOutput(JSON.stringify({ 
+          'result': 'success', 
+          'sheetUrl': doc.getUrl() 
+      }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+// 2. Hàm xử lý khi Web gửi dữ liệu khách (Method POST)
+function doPost(e) {
   var lock = LockService.getScriptLock();
   lock.tryLock(10000);
 
   try {
     var doc = SpreadsheetApp.getActiveSpreadsheet();
     var sheet = doc.getActiveSheet();
-
     var data = JSON.parse(e.postData.contents);
 
-    // TÍNH NĂNG MỚI: Nếu web hỏi checkConnection, trả về Link File Google Sheet
-    if (data.checkConnection) {
-       return ContentService
-        .createTextOutput(JSON.stringify({ 
-            'result': 'success', 
-            'sheetUrl': doc.getUrl() 
-        }))
-        .setMimeType(ContentService.MimeType.JSON);
-    }
-
-    // Logic cũ: Lưu thông tin khách mời
+    // Logic lưu thông tin khách mời
     var nextRow = sheet.getLastRow() + 1;
     var newRow = [
       data.submittedAt || new Date(),
@@ -51,13 +55,11 @@ const APPS_SCRIPT_CODE = `function doPost(e) {
       .createTextOutput(JSON.stringify({ 'result': 'success', 'row': nextRow }))
       .setMimeType(ContentService.MimeType.JSON);
   }
-
   catch (e) {
     return ContentService
       .createTextOutput(JSON.stringify({ 'result': 'error', 'error': e }))
       .setMimeType(ContentService.MimeType.JSON);
   }
-
   finally {
     lock.releaseLock();
   }
@@ -87,7 +89,7 @@ export const GuestManager: React.FC<GuestManagerProps> = ({ invitations, onDelet
       setSheetViewUrlInput(inv.data.sheetViewUrl || '');
   };
 
-  // HÀM MỚI: Gọi lên Script để lấy Link Sheet về
+  // HÀM MỚI: Sử dụng GET request thay vì POST để tránh lỗi CORS khi chỉ đọc dữ liệu
   const autoDetectSheetLink = async () => {
       if (!sheetUrlInput || !sheetUrlInput.includes('/exec')) {
           alert("Vui lòng nhập Link Apps Script chính xác trước (kết thúc bằng /exec)");
@@ -96,24 +98,25 @@ export const GuestManager: React.FC<GuestManagerProps> = ({ invitations, onDelet
 
       setIsAutoDetecting(true);
       try {
-          // Gửi request test đến Script
-          // Google Apps Script Web App (Anyone) hỗ trợ trả về JSON qua fetch
-          const response = await fetch(sheetUrlInput, {
-              method: 'POST',
-              body: JSON.stringify({ checkConnection: true })
-          });
+          // Sử dụng GET request với query param
+          // Google Apps Script redirect 302, fetch mặc định follow redirect này
+          const response = await fetch(`${sheetUrlInput}?checkConnection=true`);
           
+          if (!response.ok) {
+              throw new Error("Network response was not ok");
+          }
+
           const data = await response.json();
           
           if (data && data.sheetUrl) {
               setSheetViewUrlInput(data.sheetUrl);
               alert("✅ Thành công! Đã tìm thấy Link File Google Sheet.");
           } else {
-              throw new Error("Không tìm thấy link trong phản hồi");
+              throw new Error("Dữ liệu trả về không đúng định dạng");
           }
       } catch (e) {
           console.error(e);
-          alert("⚠️ Không thể tự động lấy link.\n\nNguyên nhân có thể:\n1. Bạn chưa cập nhật mã Script mới vào Google Sheet.\n2. Bạn chưa chọn 'Triển khai mới' (New Deployment).\n3. Quyền truy cập chưa để là 'Anyone' (Bất kỳ ai).\n\nHãy thử copy thủ công nếu cần gấp.");
+          alert("⚠️ Lỗi kết nối!\n\nQUAN TRỌNG: Bạn cần cập nhật code trong Google Sheet và tạo BẢN TRIỂN KHAI MỚI.\n\nCách làm:\n1. Copy mã mới bên dưới -> Dán vào Script.\n2. Bấm 'Triển khai' (Deploy) -> 'Tùy chọn triển khai mới' (New Deployment).\n3. Bấm 'Triển khai' -> Copy link mới dán vào đây.");
       } finally {
           setIsAutoDetecting(false);
       }
@@ -191,11 +194,10 @@ export const GuestManager: React.FC<GuestManagerProps> = ({ invitations, onDelet
                             </motion.div>
                         )}
                     </AnimatePresence>
-                    <li>Bấm <strong>Triển khai (Deploy)</strong> &rarr; <strong>Tùy chọn triển khai mới (New Deployment)</strong>.</li>
+                    <li className="font-bold text-red-600">QUAN TRỌNG: Bấm "Triển khai" (Deploy) &rarr; "Tùy chọn triển khai mới" (New Deployment).</li>
                     <li>Chọn loại: <strong>Ứng dụng Web</strong>. Quyền truy cập: <strong>Bất kỳ ai (Anyone)</strong>.</li>
                     <li>Bấm Triển khai và <strong>Copy URL ứng dụng web</strong> (kết thúc bằng <code>/exec</code>).</li>
-                    <li>Quay lại đây, bấm nút <strong>Kết nối Sheet</strong> (icon Excel xanh lá) ở danh sách bên dưới &rarr; Dán link vào ô số 1.</li>
-                    <li>Bấm nút <strong>"Tự động lấy Link"</strong> ở ô số 2 để hoàn tất.</li>
+                    <li>Quay lại đây, bấm nút <strong>Kết nối Sheet</strong> &rarr; Dán link vào ô số 1 &rarr; Bấm "Tự động lấy Link".</li>
                 </ol>
              </div>
          </div>
@@ -317,7 +319,7 @@ export const GuestManager: React.FC<GuestManagerProps> = ({ invitations, onDelet
                           {/* INPUT 1: Script URL */}
                           <div>
                               <label className="block text-sm font-medium text-gray-700 mb-1">1. Link Apps Script (Quan trọng)</label>
-                              <p className="text-xs text-gray-500 mb-2">Link kết thúc bằng <code>/exec</code>. Hãy đảm bảo bạn đã cập nhật mã Script mới.</p>
+                              <p className="text-xs text-gray-500 mb-2">Link kết thúc bằng <code>/exec</code>. Hãy đảm bảo bạn đã cập nhật mã Script mới và chọn "Triển khai mới".</p>
                               <input 
                                   type="text" 
                                   className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none font-mono text-sm"
