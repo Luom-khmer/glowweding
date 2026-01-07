@@ -882,7 +882,7 @@ export const TemplatePersonalized: React.FC<TemplatePersonalizedProps> = ({ data
                 </button>
             </motion.div>
             
-            <div className="abs pointer-events-none bg-cover" style={{top:0, left:'-566px', width:'350px', height:'667px', backgroundImage:'url("https://statics.pancake.vn/web-media/fd/42/7d/0c/1ca1e8525f99e3105eb930cd8ed684a64b07a0d9df7e0c725ca9779c-w:1260-h:2400-l:65030-t:image/png.png")'}}></div>
+            <div className="abs pointer-events-none bg-cover" style={{top:0, left:'-566px', width:'350px', height:'667px', backgroundImage:'url("https://statics.pancake.vn/web-media/fd/42/7d/0c/1ca1e8525f99e3105eb930cd8ed684a64b07a0d9df7e0c725ca9779c-w:1260-h:2400-l:65030-t:image/png.png")'}}></motion.div>
         </div>
 
         {/* --- SECTION 6: ALBUM 1 --- */}
@@ -924,8 +924,11 @@ export const TemplatePersonalized: React.FC<TemplatePersonalizedProps> = ({ data
              </motion.div>
         </div>
 
-        {/* --- POPUPS --- */}
-        <AnimatePresence>
+      </div>
+      </div>
+
+      {/* --- POPUPS (Moved OUTSIDE the scaled container) --- */}
+      <AnimatePresence>
             {showBankPopup && (
                 <motion.div 
                     initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -981,9 +984,6 @@ export const TemplatePersonalized: React.FC<TemplatePersonalizedProps> = ({ data
                 </motion.div>
             )}
         </AnimatePresence>
-
-      </div>
-      </div>
 
       {/* Music Button - Moved outside of containerRef to prevent transform context issues */}
       <div className="fixed bottom-4 left-4 z-[9999]">
