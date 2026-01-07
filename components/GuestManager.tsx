@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SavedInvitation } from '../types';
-import { Copy, Trash2, ExternalLink, FolderOpen, Eye, Pencil, FileSpreadsheet, Wrench, ChevronDown, ChevronUp, Code, Link as LinkIcon, Check, X, Table, RefreshCw, Zap } from 'lucide-react';
+import { Copy, Trash2, ExternalLink, FolderOpen, Eye, Pencil, FileSpreadsheet, Wrench, ChevronDown, ChevronUp, Code, Link as LinkIcon, Check, X, Table, RefreshCw, Zap, AlertTriangle } from 'lucide-react';
 import { Button } from './Button';
 import { invitationService } from '../services/invitationService';
 
@@ -15,9 +15,9 @@ interface GuestManagerProps {
 }
 
 // CẬP NHẬT SCRIPT GOOGLE: Thêm hàm doGet để xử lý việc lấy Link (ổn định hơn POST)
-const APPS_SCRIPT_CODE = `// 1. Hàm xử lý khi Web hỏi lấy Link (Method GET)
+const APPS_SCRIPT_CODE = `// COPY TOÀN BỘ CODE NÀY VÀO APPS SCRIPT
 function doGet(e) {
-  // Trả về JSON cho Web
+  // Trả về JSON cho Web khi kiểm tra kết nối
   if (e.parameter.checkConnection) {
     var doc = SpreadsheetApp.getActiveSpreadsheet();
     return ContentService
@@ -29,7 +29,6 @@ function doGet(e) {
   }
 }
 
-// 2. Hàm xử lý khi Web gửi dữ liệu khách (Method POST)
 function doPost(e) {
   var lock = LockService.getScriptLock();
   lock.tryLock(10000);
@@ -39,7 +38,6 @@ function doPost(e) {
     var sheet = doc.getActiveSheet();
     var data = JSON.parse(e.postData.contents);
 
-    // Logic lưu thông tin khách mời
     var nextRow = sheet.getLastRow() + 1;
     var newRow = [
       data.submittedAt || new Date(),
@@ -89,34 +87,46 @@ export const GuestManager: React.FC<GuestManagerProps> = ({ invitations, onDelet
       setSheetViewUrlInput(inv.data.sheetViewUrl || '');
   };
 
-  // HÀM MỚI: Sử dụng GET request thay vì POST để tránh lỗi CORS khi chỉ đọc dữ liệu
+  // HÀM MỚI: Xử lý lỗi chặt chẽ hơn
   const autoDetectSheetLink = async () => {
       if (!sheetUrlInput || !sheetUrlInput.includes('/exec')) {
-          alert("Vui lòng nhập Link Apps Script chính xác trước (kết thúc bằng /exec)");
+          alert("Link không hợp lệ! Link Apps Script phải kết thúc bằng '/exec'");
           return;
       }
 
       setIsAutoDetecting(true);
       try {
-          // Sử dụng GET request với query param
-          // Google Apps Script redirect 302, fetch mặc định follow redirect này
+          // Thử fetch
           const response = await fetch(`${sheetUrlInput}?checkConnection=true`);
           
-          if (!response.ok) {
-              throw new Error("Network response was not ok");
+          // Lấy text trước để kiểm tra xem có phải HTML báo lỗi không
+          const text = await response.text();
+
+          // Nếu trả về trang đăng nhập HTML -> Lỗi quyền
+          if (text.includes("<!DOCTYPE html>") || text.includes("Google Accounts") || text.includes("Sign in")) {
+               throw new Error("AUTH_ERROR");
           }
 
-          const data = await response.json();
-          
-          if (data && data.sheetUrl) {
-              setSheetViewUrlInput(data.sheetUrl);
-              alert("✅ Thành công! Đã tìm thấy Link File Google Sheet.");
-          } else {
-              throw new Error("Dữ liệu trả về không đúng định dạng");
+          try {
+             const data = JSON.parse(text);
+             if (data && data.sheetUrl) {
+                  setSheetViewUrlInput(data.sheetUrl);
+                  alert("✅ Thành công! Đã kết nối được với Google Sheet.");
+             } else {
+                 throw new Error("INVALID_JSON");
+             }
+          } catch (jsonErr) {
+             console.error("Parse Error:", jsonErr);
+             throw new Error("AUTH_ERROR"); // JSON parse fail thường do trả về HTML lỗi
           }
-      } catch (e) {
+
+      } catch (e: any) {
           console.error(e);
-          alert("⚠️ Lỗi kết nối!\n\nQUAN TRỌNG: Bạn cần cập nhật code trong Google Sheet và tạo BẢN TRIỂN KHAI MỚI.\n\nCách làm:\n1. Copy mã mới bên dưới -> Dán vào Script.\n2. Bấm 'Triển khai' (Deploy) -> 'Tùy chọn triển khai mới' (New Deployment).\n3. Bấm 'Triển khai' -> Copy link mới dán vào đây.");
+          if (e.message === "AUTH_ERROR" || e.message === "Failed to fetch") {
+              alert("⛔ LỖI QUYỀN TRUY CẬP!\n\nGoogle đang chặn link này. Nguyên nhân:\n1. Bạn CHƯA chọn 'Bất kỳ ai (Anyone)' khi triển khai.\n2. Hoặc bạn chưa tạo 'Bản triển khai mới'.\n\n👉 Hãy bấm nút mũi tên bên cạnh ô nhập để mở link kiểm tra thử. Nếu thấy 'Bạn cần quyền truy cập' thì hãy Triển khai lại.");
+          } else {
+              alert("⚠️ Lỗi kết nối: " + e.message);
+          }
       } finally {
           setIsAutoDetecting(false);
       }
@@ -320,14 +330,24 @@ export const GuestManager: React.FC<GuestManagerProps> = ({ invitations, onDelet
                           <div>
                               <label className="block text-sm font-medium text-gray-700 mb-1">1. Link Apps Script (Quan trọng)</label>
                               <p className="text-xs text-gray-500 mb-2">Link kết thúc bằng <code>/exec</code>. Hãy đảm bảo bạn đã cập nhật mã Script mới và chọn "Triển khai mới".</p>
-                              <input 
-                                  type="text" 
-                                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none font-mono text-sm"
-                                  placeholder="https://script.google.com/macros/s/.../exec"
-                                  value={sheetUrlInput}
-                                  onChange={(e) => setSheetUrlInput(e.target.value)}
-                                  autoFocus
-                              />
+                              
+                              <div className="flex gap-2">
+                                <input 
+                                    type="text" 
+                                    className="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none font-mono text-sm"
+                                    placeholder="https://script.google.com/macros/s/.../exec"
+                                    value={sheetUrlInput}
+                                    onChange={(e) => setSheetUrlInput(e.target.value)}
+                                    autoFocus
+                                />
+                                <button
+                                    onClick={() => sheetUrlInput && window.open(sheetUrlInput, '_blank')}
+                                    className="p-3 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 border border-gray-300"
+                                    title="Mở link này trên trình duyệt để kiểm tra quyền truy cập"
+                                >
+                                    <ExternalLink className="w-5 h-5" />
+                                </button>
+                              </div>
                           </div>
 
                           {/* INPUT 2: Sheet View URL (AUTO DETECT) */}
