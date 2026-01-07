@@ -34,6 +34,8 @@ export const TemplatePersonalized: React.FC<TemplatePersonalizedProps> = ({ data
   
   // State for Animation Trigger
   const [isOpening, setIsOpening] = useState(false);
+  // State for "Click to Open" Overlay (Fix Autoplay)
+  const [showStartOverlay, setShowStartOverlay] = useState(true);
 
   // Scaling Logic
   const [scale, setScale] = useState(1);
@@ -99,17 +101,17 @@ export const TemplatePersonalized: React.FC<TemplatePersonalizedProps> = ({ data
     return () => clearTimeout(timer);
   }, [localData, isEditMode, onAutosave, readonly]);
 
-  // Auto-play and Opening Effect
-  useEffect(() => {
-    // Start opening immediately
-    const timer = setTimeout(() => {
-        setIsOpening(true);
-        if (audioRef.current && !isPlaying) {
-            audioRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
-        }
-    }, 800);
-    return () => clearTimeout(timer);
-  }, []);
+  // Handle Start (Open Invitation & Play Music)
+  const handleStartView = () => {
+      setShowStartOverlay(false);
+      setIsOpening(true);
+      
+      if (audioRef.current) {
+          audioRef.current.play()
+            .then(() => setIsPlaying(true))
+            .catch((e) => console.log("Autoplay prevented by browser, waiting for interaction", e));
+      }
+  };
 
   // Music Handler
   const handleMusicClick = () => {
@@ -468,6 +470,43 @@ export const TemplatePersonalized: React.FC<TemplatePersonalizedProps> = ({ data
       <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept="image/*" onChange={handleFileChange} />
       <input type="file" ref={musicInputRef} style={{ display: 'none' }} accept="audio/*" onChange={handleMusicChange} />
       
+      {/* "CLICK TO OPEN" OVERLAY (FIX AUTOPLAY) */}
+      <AnimatePresence>
+        {showStartOverlay && (
+            <motion.div 
+                initial={{ opacity: 1 }}
+                exit={{ opacity: 0, transition: { duration: 0.8 } }}
+                className="fixed inset-0 z-[99999] flex flex-col items-center justify-center bg-[#8e0101] text-white"
+                style={{backgroundImage: 'url("https://statics.pancake.vn/web-media/0e/6c/18/fb/44e9347bb12368a07e646ad45939e6086fc1ce3b2b39c28663352c01-w:1260-h:2400-l:1296984-t:image/png.png")', backgroundSize: 'cover', backgroundPosition: 'center'}}
+            >
+                <div className="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
+                
+                <motion.div 
+                    initial={{ scale: 0.8, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ duration: 0.8, delay: 0.2 }}
+                    className="relative z-10 flex flex-col items-center"
+                >
+                    <div className="w-24 h-24 rounded-full bg-white/20 flex items-center justify-center mb-6 animate-pulse">
+                        <Heart className="w-12 h-12 text-white fill-white" />
+                    </div>
+                    
+                    <h1 className="text-3xl md:text-4xl font-serif text-center mb-2 px-4">
+                        {guestName ? `Mời ${guestName}` : 'Mời bạn'}
+                    </h1>
+                    <p className="text-lg font-light italic mb-8 opacity-90">Mở thiệp hồng</p>
+                    
+                    <button 
+                        onClick={handleStartView}
+                        className="px-8 py-3 bg-white text-[#8e0101] rounded-full font-bold text-lg shadow-xl hover:scale-105 transition-transform flex items-center gap-2"
+                    >
+                        <Music className="w-5 h-5" /> Mở Thiệp Ngay
+                    </button>
+                </motion.div>
+            </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Cropper Modal - MOVED OUTSIDE OF SCALED CONTAINER */}
       <AnimatePresence>
         {isCropping && cropImageSrc && (
