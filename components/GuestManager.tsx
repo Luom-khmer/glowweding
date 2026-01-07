@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SavedInvitation } from '../types';
-import { Copy, Trash2, ExternalLink, FolderOpen, Eye, Pencil, FileSpreadsheet, Wrench, ChevronDown, ChevronUp, Code, Link as LinkIcon, Check, X, Table } from 'lucide-react';
+import { Copy, Trash2, ExternalLink, FolderOpen, Eye, Pencil, FileSpreadsheet, Wrench, ChevronDown, ChevronUp, Code, Link as LinkIcon, Check, X, Table, RefreshCw, Zap } from 'lucide-react';
 import { Button } from './Button';
 import { invitationService } from '../services/invitationService';
 
@@ -14,6 +14,7 @@ interface GuestManagerProps {
   onEdit: (invitation: SavedInvitation) => void;
 }
 
+// CẬP NHẬT SCRIPT GOOGLE: Thêm đoạn xử lý 'checkConnection' để trả về Link Sheet
 const APPS_SCRIPT_CODE = `function doPost(e) {
   var lock = LockService.getScriptLock();
   lock.tryLock(10000);
@@ -22,11 +23,20 @@ const APPS_SCRIPT_CODE = `function doPost(e) {
     var doc = SpreadsheetApp.getActiveSpreadsheet();
     var sheet = doc.getActiveSheet();
 
-    var nextRow = sheet.getLastRow() + 1;
-
     var data = JSON.parse(e.postData.contents);
 
-    // Thứ tự lưu: Thời gian, Tên, Quan hệ, Tham dự, Lời chúc
+    // TÍNH NĂNG MỚI: Nếu web hỏi checkConnection, trả về Link File Google Sheet
+    if (data.checkConnection) {
+       return ContentService
+        .createTextOutput(JSON.stringify({ 
+            'result': 'success', 
+            'sheetUrl': doc.getUrl() 
+        }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // Logic cũ: Lưu thông tin khách mời
+    var nextRow = sheet.getLastRow() + 1;
     var newRow = [
       data.submittedAt || new Date(),
       data.guestName,
@@ -56,9 +66,10 @@ const APPS_SCRIPT_CODE = `function doPost(e) {
 export const GuestManager: React.FC<GuestManagerProps> = ({ invitations, onDelete, onCreateNew, onView, onEdit }) => {
   const [showScript, setShowScript] = useState(false);
   const [editingSheetId, setEditingSheetId] = useState<string | null>(null);
-  const [sheetUrlInput, setSheetUrlInput] = useState(''); // Script URL
-  const [sheetViewUrlInput, setSheetViewUrlInput] = useState(''); // View URL (Docs)
+  const [sheetUrlInput, setSheetUrlInput] = useState(''); // Script URL (User nhập tay)
+  const [sheetViewUrlInput, setSheetViewUrlInput] = useState(''); // View URL (Tự động lấy)
   const [isSavingSheet, setIsSavingSheet] = useState(false);
+  const [isAutoDetecting, setIsAutoDetecting] = useState(false);
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -74,6 +85,38 @@ export const GuestManager: React.FC<GuestManagerProps> = ({ invitations, onDelet
       setEditingSheetId(inv.id);
       setSheetUrlInput(inv.data.googleSheetUrl || '');
       setSheetViewUrlInput(inv.data.sheetViewUrl || '');
+  };
+
+  // HÀM MỚI: Gọi lên Script để lấy Link Sheet về
+  const autoDetectSheetLink = async () => {
+      if (!sheetUrlInput || !sheetUrlInput.includes('/exec')) {
+          alert("Vui lòng nhập Link Apps Script chính xác trước (kết thúc bằng /exec)");
+          return;
+      }
+
+      setIsAutoDetecting(true);
+      try {
+          // Gửi request test đến Script
+          // Google Apps Script Web App (Anyone) hỗ trợ trả về JSON qua fetch
+          const response = await fetch(sheetUrlInput, {
+              method: 'POST',
+              body: JSON.stringify({ checkConnection: true })
+          });
+          
+          const data = await response.json();
+          
+          if (data && data.sheetUrl) {
+              setSheetViewUrlInput(data.sheetUrl);
+              alert("✅ Thành công! Đã tìm thấy Link File Google Sheet.");
+          } else {
+              throw new Error("Không tìm thấy link trong phản hồi");
+          }
+      } catch (e) {
+          console.error(e);
+          alert("⚠️ Không thể tự động lấy link.\n\nNguyên nhân có thể:\n1. Bạn chưa cập nhật mã Script mới vào Google Sheet.\n2. Bạn chưa chọn 'Triển khai mới' (New Deployment).\n3. Quyền truy cập chưa để là 'Anyone' (Bất kỳ ai).\n\nHãy thử copy thủ công nếu cần gấp.");
+      } finally {
+          setIsAutoDetecting(false);
+      }
   };
 
   const saveSheetConfig = async (inv: SavedInvitation) => {
@@ -148,10 +191,11 @@ export const GuestManager: React.FC<GuestManagerProps> = ({ invitations, onDelet
                             </motion.div>
                         )}
                     </AnimatePresence>
-                    <li>Bấm <strong>Triển khai (Deploy)</strong> &rarr; <strong>Tùy chọn triển khai mới</strong>.</li>
+                    <li>Bấm <strong>Triển khai (Deploy)</strong> &rarr; <strong>Tùy chọn triển khai mới (New Deployment)</strong>.</li>
                     <li>Chọn loại: <strong>Ứng dụng Web</strong>. Quyền truy cập: <strong>Bất kỳ ai (Anyone)</strong>.</li>
                     <li>Bấm Triển khai và <strong>Copy URL ứng dụng web</strong> (kết thúc bằng <code>/exec</code>).</li>
-                    <li>Quay lại đây, bấm nút <strong>Kết nối Sheet</strong> (icon Excel xanh lá) ở danh sách bên dưới &rarr; Dán link vào.</li>
+                    <li>Quay lại đây, bấm nút <strong>Kết nối Sheet</strong> (icon Excel xanh lá) ở danh sách bên dưới &rarr; Dán link vào ô số 1.</li>
+                    <li>Bấm nút <strong>"Tự động lấy Link"</strong> ở ô số 2 để hoàn tất.</li>
                 </ol>
              </div>
          </div>
@@ -209,7 +253,7 @@ export const GuestManager: React.FC<GuestManagerProps> = ({ invitations, onDelet
                          {inv.data.sheetViewUrl && (
                              <button
                                 onClick={() => copyToClipboard(inv.data.sheetViewUrl!)}
-                                className="flex items-center justify-center gap-2 px-3 py-2 bg-green-100 text-green-800 rounded-lg hover:bg-green-200 font-medium transition"
+                                className="flex items-center justify-center gap-2 px-3 py-2 bg-green-100 text-green-800 rounded-lg hover:bg-green-200 font-medium transition shadow-sm border border-green-200"
                                 title="Copy link Google Sheet gửi cho Cô Dâu Chú Rể"
                             >
                                 <Table className="w-4 h-4" /> <span className="hidden lg:inline text-xs font-bold">Copy Link Báo Cáo</span>
@@ -272,8 +316,8 @@ export const GuestManager: React.FC<GuestManagerProps> = ({ invitations, onDelet
                       <div className="space-y-4">
                           {/* INPUT 1: Script URL */}
                           <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">1. Link Apps Script (Để chạy dữ liệu)</label>
-                              <p className="text-xs text-gray-500 mb-2">Link kết thúc bằng <code>/exec</code>. (Làm theo hướng dẫn ở trên)</p>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">1. Link Apps Script (Quan trọng)</label>
+                              <p className="text-xs text-gray-500 mb-2">Link kết thúc bằng <code>/exec</code>. Hãy đảm bảo bạn đã cập nhật mã Script mới.</p>
                               <input 
                                   type="text" 
                                   className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none font-mono text-sm"
@@ -284,13 +328,23 @@ export const GuestManager: React.FC<GuestManagerProps> = ({ invitations, onDelet
                               />
                           </div>
 
-                          {/* INPUT 2: Sheet View URL */}
-                          <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">2. Link File Sheet Gốc (Để gửi khách xem)</label>
-                              <p className="text-xs text-gray-500 mb-2">Copy link trên thanh địa chỉ trình duyệt khi đang mở file Excel.</p>
+                          {/* INPUT 2: Sheet View URL (AUTO DETECT) */}
+                          <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                              <div className="flex justify-between items-center mb-1">
+                                <label className="block text-sm font-medium text-gray-700">2. Link File Sheet Gốc</label>
+                                <button 
+                                    onClick={autoDetectSheetLink}
+                                    disabled={isAutoDetecting || !sheetUrlInput}
+                                    className="text-xs flex items-center gap-1 bg-amber-100 text-amber-800 px-3 py-1.5 rounded-full hover:bg-amber-200 font-bold border border-amber-200 disabled:opacity-50 transition-all shadow-sm"
+                                >
+                                    {isAutoDetecting ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3 text-amber-600" />}
+                                    {isAutoDetecting ? 'Đang lấy...' : 'Tự động lấy Link'}
+                                </button>
+                              </div>
+                              <p className="text-xs text-gray-500 mb-2">Bấm nút vàng ở trên để hệ thống tự điền link này cho bạn.</p>
                               <input 
                                   type="text" 
-                                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none font-mono text-sm"
+                                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none font-mono text-sm bg-white"
                                   placeholder="https://docs.google.com/spreadsheets/d/..."
                                   value={sheetViewUrlInput}
                                   onChange={(e) => setSheetViewUrlInput(e.target.value)}
